@@ -1,0 +1,217 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { puzzleOf, SET_LABEL, SETS, type AlgCase, type AlgPuzzle, type AlgSet } from "../lib/algs";
+import { mainAlg } from "../lib/algChoice";
+import type { AlgPrefs } from "../lib/algPrefs";
+import { STATUS_LABEL, STATUS_ORDER, statusOf, type LearnStatus } from "../lib/algStatus";
+import { CROSS_COLORS } from "../lib/crossColor";
+import { fmt } from "../lib/stats";
+import { addTime, caseScramble, caseStats, casesFor, loadTrainer, nextCase, saveTrainer, type TrainerState } from "../lib/trainer";
+import { useTimer } from "../hooks/useTimer";
+import { useFocusMode } from "../hooks/useFocusMode";
+import type { useAlgPrefs } from "../hooks/useAlgPrefs";
+import { CaseDiagram } from "./CaseDiagram";
+import { CasePicker } from "./CasePicker";
+import { AlgText } from "./AlgText";
+import { TimeDisplay } from "./TimeDisplay";
+
+const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
+const COLOR_NAME: Record<string, string> = Object.fromEntries(CROSS_COLORS.map(c => [c.swatch, c.id]));
+
+interface Attempt { c: AlgCase; scramble: string | null; failed?: boolean }
+
+// OLL/PLL trainer: scramble into a random case from the ones you pick, solve it with the timer, and
+// see your times per case. The case is only shown after the solve, so recognising it is part of
+// the practice.
+export function TrainerPage({ prefs: { prefs } }: { prefs: ReturnType<typeof useAlgPrefs> }) {
+  const [store, setStore] = useState<TrainerState>(loadTrainer);
+  useEffect(() => saveTrainer(store), [store]);
+  const { statuses, cross } = prefs;
+
+  const all = casesFor(store.set);
+  const puzzle = puzzleOf(store.set);
+  const picked = store.picked[store.set] ?? null;
+  // Cases with a chosen status; the picker narrows those down to the ones you've picked.
+  const byStatus = useMemo(
+    () => all.filter(c => store.pool.includes(statusOf(statuses, c.id))),
+    [all, store.pool, statuses],
+  );
+  const pool = useMemo(
+    () => (picked ? byStatus.filter(c => picked.includes(c.id)) : byStatus),
+    [byStatus, picked],
+  );
+  const poolKey = `${store.set}|${pool.map(c => c.id).join(",")}|${cross}`;
+
+  const setSet = (set: AlgSet) => setStore(s => ({ ...s, set }));
+  const togglePool = (st: LearnStatus) => setStore(s => ({
+    ...s, pool: s.pool.includes(st) ? s.pool.filter(x => x !== st) : [...s.pool, st],
+  }));
+  const setPicked = (ids: string[] | null) => setStore(s => {
+    const next = { ...s.picked };
+    if (ids) next[s.set] = ids; else delete next[s.set];
+    return { ...s, picked: next };
+  });
+  return (
+    <section className="trainer">
+      <div className="trainer-controls dimmable">
+        <div className="trainer-sets">
+          <div className="view-tabs" role="radiogroup" aria-label="Puzzle">
+            {(["3x3", "2x2"] as AlgPuzzle[]).map(p => (
+              <button key={p} type="button" role="radio" aria-checked={puzzle === p} className={puzzle === p ? "on" : ""}
+                onClick={() => { if (p !== puzzle) setSet(SETS[p][0]); }}>{p.replace("x", "×")}</button>
+            ))}
+          </div>
+          <div className="segmented" role="radiogroup" aria-label="Algorithm set">
+            {SETS[puzzle].map(set => (
+              <button key={set} type="button" role="radio" aria-checked={store.set === set} className={store.set === set ? "on" : ""}
+                onClick={() => setSet(set)}>{SET_LABEL[set]}</button>
+            ))}
+          </div>
+        </div>
+        <div className="status-filter" role="group" aria-label="Cases to practise">
+          {STATUS_ORDER.map(st => {
+            const n = all.filter(c => statusOf(statuses, c.id) === st).length;
+            const on = store.pool.includes(st);
+            return (
+              <button key={st} type="button" className={`status-${st}${on ? " on" : ""}`} aria-pressed={on} onClick={() => togglePool(st)}>
+                <i className="status-dot" aria-hidden="true" />{STATUS_LABEL[st]} <span>{n}</span>
+              </button>
+            );
+          })}
+        </div>
+        {byStatus.length > 0 && (
+          <CasePicker cases={byStatus} allIds={all.map(c => c.id)} picked={picked} onChange={setPicked}
+            choices={prefs.choices} cross={cross} />
+        )}
+      </div>
+
+      {pool.length === 0 ? (
+        <p className="trainer-empty panel">
+          {byStatus.length === 0
+            ? <>No {puzzle === "2x2" ? "2×2 " : ""}{SET_LABEL[store.set]} cases to practise. Turn on a status above, or mark cases as Learning on the Algorithms page.</>
+            : <>No cases picked. Open <b>Cases</b> above and choose some.</>}
+        </p>
+      ) : (
+        <TrainerRun pool={pool} poolKey={poolKey} set={store.set} times={store.times} setStore={setStore} prefs={prefs} />
+      )}
+    </section>
+  );
+}
+
+// The timed part: mounted only while there are cases, so the timer always has its stage.
+function TrainerRun({ pool, poolKey, set, times, setStore, prefs }: {
+  pool: AlgCase[]; poolKey: string; set: AlgSet; times: TrainerState["times"];
+  setStore: Dispatch<SetStateAction<TrainerState>>; prefs: AlgPrefs;
+}) {
+  const { cross } = prefs;
+  const crossInfo = CROSS_COLORS.find(c => c.id === cross)!;
+  const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const [last, setLast] = useState<{ c: AlgCase; t: number } | null>(null);
+  const request = useRef(0);
+
+  const load = useCallback((c: AlgCase | null) => {
+    const id = ++request.current;
+    if (!c) { setAttempt(null); return; }
+    setAttempt({ c, scramble: null });
+    caseScramble(mainAlg(c, prefs.choices), cross, c.set).then(
+      scramble => { if (id === request.current) setAttempt({ c, scramble }); },
+      () => { if (id === request.current) setAttempt({ c, scramble: null, failed: true }); },
+    );
+  }, [prefs.choices, cross]);
+
+  // New case whenever the pool (set, statuses, cross color) changes.
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
+  const poolRef = useRef(pool);
+  useEffect(() => { poolRef.current = pool; }, [pool]);
+  useEffect(() => { loadRef.current(nextCase(poolRef.current)); }, [poolKey]);
+
+  const attemptRef = useRef(attempt);
+  useEffect(() => { attemptRef.current = attempt; }, [attempt]);
+  const onFinish = useCallback((t: number) => {
+    const a = attemptRef.current;
+    if (!a?.scramble) return;
+    setStore(s => ({ ...s, times: { ...s.times, [a.c.id]: addTime(s.times[a.c.id], t) } }));
+    setLast({ c: a.c, t });
+    loadRef.current(nextCase(poolRef.current, a.c.id));
+  }, [setStore]);
+
+  const stageRef = useRef<HTMLDivElement>(null);
+  const timer = useTimer({ stageRef, inspection: false, onFinish, enabled: !!attempt?.scramble });
+  const active = timer.phase !== "idle";
+  useFocusMode(active);
+
+  const deleteLast = () => {
+    if (!last) return;
+    setStore(s => ({ ...s, times: { ...s.times, [last.c.id]: (s.times[last.c.id] ?? []).slice(0, -1) } }));
+    setLast(null);
+  };
+
+  const shown = timer.display ?? (last ? fmt(last.t) : "0.00");
+  const act = isTouch ? "Touch and hold" : <>Hold <kbd>Space</kbd></>;
+  const hint = timer.phase === "running" ? (isTouch ? "Tap to stop" : "Any key to stop") : <>{act} until green, release to start</>;
+  const stageClass = ["stage", timer.holding && !timer.ready && "holding", timer.ready && "ready"].filter(Boolean).join(" ");
+
+  // Slowest first, so the cases that need work are at the top.
+  const rows = pool
+    .map(c => ({ c, ...caseStats(times[c.id]) }))
+    .sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
+  const lastStats = last ? caseStats(times[last.c.id]) : null;
+  const front = COLOR_NAME[crossInfo.faces.F];
+
+
+  return (
+        <>
+          <div className="scramble dimmable">
+            <div className="scramble-text">
+              <span className="label">
+                {puzzleOf(set) === "2x2" ? "2×2 " : ""}{SET_LABEL[set]} trainer · {pool.length} {pool.length === 1 ? "case" : "cases"} · scramble white top, green front,
+                then hold {crossInfo.top} on top{front && front !== "green" ? `, ${front} in front` : ""}
+              </span>
+              {attempt?.scramble
+                ? <span className="moves">{attempt.scramble}</span>
+                : attempt?.failed
+                  ? <span className="moves pending" role="alert">Couldn't make a scramble for this case.</span>
+                  : <span className="moves pending" aria-live="polite">Generating scramble…</span>}
+            </div>
+            <button type="button" onClick={() => load(nextCase(pool, attempt?.c.id))}>Skip case</button>
+          </div>
+
+          <div className={stageClass} ref={stageRef}>
+            <TimeDisplay shown={shown} running={timer.phase === "running"} />
+            <div className="hint dimmable">{hint}</div>
+            <div className="last-actions dimmable">
+              {last && !active && <>
+                <button type="button" onClick={() => load(last.c)}>Practise {last.c.name} again</button>
+                <button type="button" className="danger" onClick={deleteLast}>Delete</button>
+              </>}
+            </div>
+          </div>
+
+          {last && lastStats && (
+            <div className="panel trainer-last dimmable">
+              <CaseDiagram c={last.c} alg={mainAlg(last.c, prefs.choices)} cross={cross} className="trainer-diagram" />
+              <div>
+                <h2>Last case</h2>
+                <b className="trainer-case">{last.c.name} <span>{fmt(last.t)}</span></b>
+                <code className="trainer-alg"><AlgText alg={mainAlg(last.c, prefs.choices)} labels /></code>
+                <small>Avg of 5 {fmt(lastStats.avg)} · best {fmt(lastStats.best)} · {lastStats.reps} {lastStats.reps === 1 ? "time" : "times"}</small>
+              </div>
+            </div>
+          )}
+
+          <div className="panel trainer-stats dimmable">
+            <h2>Your cases · slowest first</h2>
+            <table>
+              <thead><tr><th>Case</th><th>Avg 5</th><th>Best</th><th>Times</th></tr></thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.c.id} className={r.reps ? "" : "untried"}>
+                    <td>{r.c.name}</td><td>{fmt(r.avg)}</td><td>{fmt(r.best)}</td><td>{r.reps}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+  );
+}

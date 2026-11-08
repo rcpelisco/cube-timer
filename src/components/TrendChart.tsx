@@ -1,0 +1,47 @@
+import { avgOf, eff, fmt, type Solve } from "../lib/stats";
+
+const W = 400, H = 120, L = 44, R = 8, T = 8, B = 10;
+
+export function TrendChart({ solves }: { solves: Solve[] }) {
+  const start = Math.max(0, solves.length - 50);
+  const pts: [number, number][] = [], aoPts: [number, number][] = [];
+  for (let i = start; i < solves.length; i++) {
+    const v = eff(solves[i]);
+    if (isFinite(v)) pts.push([i, v]);
+    const a = avgOf(solves.slice(0, i + 1), 5);
+    if (a != null && isFinite(a)) aoPts.push([i, a]);
+  }
+
+  return (
+    <div className="panel trend">
+      <h2><span>Trend · last 50</span><span>{pts.length >= 2 ? `${solves.length - start} solves` : ""}</span></h2>
+      {pts.length < 2 ? <div className="empty">The chart appears after two solves.</div> : <Chart {...{ pts, aoPts, start, end: solves.length - 1 }} />}
+      <div className="legend"><span className="l-single">Single</span><span className="l-ao5">Ao5</span></div>
+    </div>
+  );
+}
+
+function Chart({ pts, aoPts, start, end }: { pts: [number, number][]; aoPts: [number, number][]; start: number; end: number }) {
+  const all = pts.concat(aoPts).map(p => p[1]);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (hi - lo < 200) { const m = (hi + lo) / 2; lo = m - 100; hi = m + 100; }
+  const span = Math.max(1, end - start);
+  const X = (i: number) => L + ((i - start) / span) * (W - L - R);
+  const Y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const path = (arr: [number, number][]) => arr.map((p, k) => `${k ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
+  const last = pts[pts.length - 1];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Solve times trend">
+      {[hi, (hi + lo) / 2, lo].map(v => (
+        <g key={v}>
+          <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--line)" strokeWidth={1} />
+          <text x={L - 6} y={Y(v) + 4} textAnchor="end" fontSize={11} fill="var(--muted)" fontFamily="Chivo Mono, monospace">{fmt(v)}</text>
+        </g>
+      ))}
+      <path d={path(pts)} fill="none" stroke="var(--muted)" strokeWidth={1.2} vectorEffect="non-scaling-stroke" opacity={0.7} />
+      {aoPts.length > 1 && <path d={path(aoPts)} fill="none" stroke="var(--accent)" strokeWidth={2.2} vectorEffect="non-scaling-stroke" />}
+      <circle cx={X(last[0])} cy={Y(last[1])} r={3} fill="var(--ink)" />
+    </svg>
+  );
+}

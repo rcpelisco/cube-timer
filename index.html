@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Speedcubing timer with scrambles, inspection and averages." />
+    <!-- iOS home-screen app: full screen, content runs under a translucent status bar -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Cube Timer" />
+    <meta name="theme-color" content="#eceff3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1116" media="(prefers-color-scheme: dark)" />
+    <title>Cube Timer</title>
+    <script>
+      // Apply a forced Light/Dark theme before first paint (see src/lib/theme.ts).
+      try {
+        var t = localStorage.getItem("cubeTimer.theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
