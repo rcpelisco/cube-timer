@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLeave } from "../hooks/useLeave";
 import { puzzleOf, setupFor, SET_LABEL, type AlgCase } from "../lib/algs";
 import { CaseDiagram } from "./CaseDiagram";
 import { AlgText } from "./AlgText";
@@ -19,6 +20,7 @@ export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onC
   position: { index: number; total: number } | null; onPrev: (() => void) | null; onNext: (() => void) | null;
 }) {
   const [watching, setWatching] = useState<string | null>(null);
+  const { leaving, close } = useLeave(onClose);
   const watchingRef = useRef(false);
   useEffect(() => { watchingRef.current = watching !== null; }, [watching]);
   const [slide, setSlide] = useState<"next" | "prev" | null>(null);
@@ -48,16 +50,16 @@ export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onC
   useEffect(() => {
     // While the 3D popup is open, Esc belongs to the popup.
     const esc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !watchingRef.current) { e.preventDefault(); onClose(); }
+      if (e.key === "Escape" && !watchingRef.current) { e.preventDefault(); close(); }
     };
     window.addEventListener("keydown", esc);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { window.removeEventListener("keydown", esc); document.body.style.overflow = prev; };
-  }, [onClose]);
+  }, [close]);
 
   return createPortal(
-    <div className="case-detail" role="dialog" aria-modal="true" aria-label={c.name} ref={root}
+    <div className={`case-detail${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={c.name} ref={root}
       onTouchStart={e => { const t = e.touches[0]; touch.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null; }}
       onTouchEnd={e => {
         const start = touch.current; touch.current = null;
@@ -75,7 +77,7 @@ export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onC
           <button type="button" className="nav-btn" aria-label="Previous case" disabled={!onPrev} onClick={() => go("prev")}>‹</button>
           {position && <span className="case-pos">{position.index + 1} / {position.total}</span>}
           <button type="button" className="nav-btn" aria-label="Next case" disabled={!onNext} onClick={() => go("next")}>›</button>
-          <button type="button" className="overlay-close" aria-label="Close" onClick={onClose}>✕</button>
+          <button type="button" className="overlay-close" aria-label="Close" onClick={close}>✕</button>
         </div>
       </div>
       <div key={c.id} className={`case-detail-body${slide ? ` slide-${slide}` : ""}`}>
@@ -129,22 +131,23 @@ export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onC
 
 function Cube3DPopup({ c, alg, cross, onClose }: { c: AlgCase; alg: string; cross: CrossColor; onClose: () => void }) {
   const is2x2 = puzzleOf(c.set) === "2x2";
+  const { leaving, close } = useLeave(onClose);
   // Esc closes just this popup: catch it before the detail view's own Esc handler.
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      e.preventDefault(); e.stopImmediatePropagation(); onClose();
+      e.preventDefault(); e.stopImmediatePropagation(); close();
     };
     window.addEventListener("keydown", esc, true);
     return () => window.removeEventListener("keydown", esc, true);
-  }, [onClose]);
+  }, [close]);
 
   return (
-    <div className="cube-popup-backdrop" onClick={onClose}>
+    <div className={`cube-popup-backdrop${leaving ? " leaving" : ""}`} onClick={close}>
       <div className="cube-popup" role="dialog" aria-modal="true" aria-label={`${c.name} on a 3D cube`} onClick={e => e.stopPropagation()}>
         <div className="cube-popup-head">
           <span className="label">{c.name}</span>
-          <button type="button" className="overlay-close" aria-label="Close 3D cube" onClick={onClose}>✕</button>
+          <button type="button" className="overlay-close" aria-label="Close 3D cube" onClick={close}>✕</button>
         </div>
         <TwistyView className="case-3d" label={`${c.name} algorithm on a 3D cube`} options={{
           puzzle: is2x2 ? "2x2x2" : "3x3x3", alg, experimentalSetupAlg: rotationFor(cross), experimentalSetupAnchor: "end",

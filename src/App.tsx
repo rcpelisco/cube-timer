@@ -86,20 +86,21 @@ export default function App() {
     return () => window.removeEventListener("click", blur);
   }, []);
 
-  const setPenalty = (i: number, pen: Penalty) =>
-    setSolves(list => list.map((s, j) => (j === i ? { ...s, pen: s.pen === pen ? 0 : pen } : s)));
-  const deleteSolve = (i: number) => setSolves(list => list.filter((_, j) => j !== i));
+  // Stable callbacks, so the memoised stats and solve list skip the timer's per-frame re-renders.
+  const setPenalty = useCallback((i: number, pen: Penalty) =>
+    setSolves(list => list.map((s, j) => (j === i ? { ...s, pen: s.pen === pen ? 0 : pen } : s))), [setSolves]);
+  const deleteSolve = useCallback((i: number) => setSolves(list => list.filter((_, j) => j !== i)), [setSolves]);
   // The last solve's detail, opened from the Note button under the time.
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteAt, setNoteAt] = useState<number | null>(null);
   const closeNote = useCallback(() => { setNoteOpen(false); setNoteAt(null); }, []);
-  const setNote = (i: number, note: string) => setSolves(list => list.map((s, j) => {
+  const setNote = useCallback((i: number, note: string) => setSolves(list => list.map((s, j) => {
     if (j !== i) return s;
     const rest = { ...s };
     delete rest.note;
     const trimmed = note.slice(0, MAX_NOTE);
     return trimmed.trim() ? { ...rest, note: trimmed } : rest;
-  }));
+  })), [setSolves]);
   const importFile = (text: string) => {
     const result = importCsTimer(text, sessions.sessions);
     if (result.added.length) sessions.setSessions(result.sessions);

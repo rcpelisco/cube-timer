@@ -34,12 +34,57 @@ export const avgOf: Stat = (list, n) => {
   return mid.some(x => !isFinite(x)) ? Infinity : mid.reduce((a, b) => a + b, 0) / mid.length;
 };
 
-export function bestRolling(solves: Solve[], fn: Stat, n: number): number | null {
-  let best: number | null = null;
-  for (let i = n; i <= solves.length; i++) {
-    const v = fn(solves.slice(i - n, i), n);
-    if (v != null && (best == null || v < best)) best = v;
+// The value of `fn` over every run of n solves in a row: out[i] is for solves i−n+1 … i (null
+// before there are n). Gives exactly what fn(solves.slice(i − n + 1, i + 1), n) would, but for
+// avgOf it keeps the window sorted as it slides instead of sorting each window from scratch.
+export function rolling(solves: Solve[], fn: Stat, n: number): (number | null)[] {
+  const out: (number | null)[] = new Array(solves.length).fill(null);
+  if (n < 1 || solves.length < n) return out;
+  if (fn === avgOf) {
+    const trim = n <= 12 ? 1 : Math.ceil(n * 0.05), m = n - 2 * trim;
+    const vals = solves.map(eff);
+    const w: number[] = [];
+    // First position in w holding a value ≥ v.
+    const at = (v: number) => { let lo = 0, hi = w.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (w[mid] < v) lo = mid + 1; else hi = mid; } return lo; };
+    for (let i = 0; i < vals.length; i++) {
+      w.splice(at(vals[i]), 0, vals[i]);
+      if (i >= n) w.splice(at(vals[i - n]), 1);
+      if (i < n - 1) continue;
+      // Sorted, so the middle has a DNF exactly when its slowest time is one.
+      if (!isFinite(w[n - trim - 1])) { out[i] = Infinity; continue; }
+      let sum = 0;
+      for (let k = trim; k < n - trim; k++) sum += w[k];
+      out[i] = sum / m;
+    }
+    return out;
   }
+  if (fn === meanOf) {
+    const vals = solves.map(eff);
+    for (let i = n - 1; i < vals.length; i++) {
+      let sum = 0, dnf = false;
+      for (let k = i - n + 1; k <= i; k++) { if (!isFinite(vals[k])) { dnf = true; break; } sum += vals[k]; }
+      out[i] = dnf ? Infinity : sum / n;
+    }
+    return out;
+  }
+  for (let i = n - 1; i < solves.length; i++) out[i] = fn(solves.slice(i - n + 1, i + 1), n);
+  return out;
+}
+
+const minOf = (vals: (number | null)[]) => {
+  let best: number | null = null;
+  for (const v of vals) if (v != null && (best == null || v < best)) best = v;
+  return best;
+};
+
+export function bestRolling(solves: Solve[], fn: Stat, n: number): number | null {
+  return minOf(rolling(solves, fn, n));
+}
+
+// Best single (fastest effective time), or null with no solves.
+export function bestSingle(solves: Solve[]): number | null {
+  let best: number | null = null;
+  for (const s of solves) { const v = eff(s); if (best == null || v < best) best = v; }
   return best;
 }
 
@@ -52,11 +97,10 @@ export function averageWindow(solves: Solve[], fn: Stat, n: number, which: "curr
   let start = solves.length - n;
   if (start < 0) return null;
   if (which === "best") {
-    const best = bestRolling(solves, fn, n);
+    const all = rolling(solves, fn, n);
+    const best = minOf(all);
     if (best == null) return null;
-    for (let i = 0; i + n <= solves.length; i++) {
-      if (fn(solves.slice(i, i + n), n) === best) { start = i; break; }
-    }
+    start = all.indexOf(best) - n + 1;
   }
   const win = solves.slice(start, start + n);
   const value = fn(win, n);
@@ -78,8 +122,8 @@ export function newBests(prev: Solve[], solve: Solve): PbKind[] {
   const out: PbKind[] = [];
   const t = eff(solve);
   if (!isFinite(t)) return out;
-  const prevBest = Math.min(...prev.map(eff));
-  if (isFinite(prevBest) && t < prevBest) out.push("Single");
+  const prevBest = bestSingle(prev);
+  if (prevBest != null && isFinite(prevBest) && t < prevBest) out.push("Single");
   const next = [...prev, solve];
   for (const [kind, n] of [["Ao5", 5], ["Ao12", 12]] as const) {
     const now = avgOf(next, n), before = bestRolling(prev, avgOf, n);

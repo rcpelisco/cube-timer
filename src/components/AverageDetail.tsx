@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DNF, eff, fmt, type Solve } from "../lib/stats";
 import type { AverageWindow } from "../lib/stats";
+import { useLeave } from "../hooks/useLeave";
+import { useFlyIn } from "../hooks/useFlyIn";
 
 // A solve's time as listed in an average: "12.34", "14.34+" for +2, "DNF".
 const timeText = (s: Solve) => (s.pen === DNF ? "DNF" : `${fmt(eff(s))}${s.pen === 2 ? "+" : ""}`);
@@ -11,21 +13,27 @@ const dateText = (at: number) =>
 
 // Full-screen list of the solves behind one average (Mo3, Ao5, Ao12, Ao100), with the times a
 // trimmed average leaves out in brackets.
-export function AverageDetail({ label, which, win, onClose }: {
-  label: string; which: "current" | "best"; win: AverageWindow; onClose: () => void;
+// origin: the tapped value in Statistics. The big value flies up out of it as this opens; closing
+// is the usual slide down.
+export function AverageDetail({ label, which, win, origin, onClose }: {
+  label: string; which: "current" | "best"; win: AverageWindow; origin?: HTMLElement; onClose: () => void;
 }) {
   const [copyLabel, setCopyLabel] = useState("Copy");
+  const valueRef = useRef<HTMLDivElement>(null);
+  const { leaving, close } = useLeave(onClose);
+  const fly = useFlyIn(origin, valueRef, leaving);
+
 
   // Esc closes. Space is swallowed so it doesn't arm the timer behind this view.
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); if (e.type === "keydown") onClose(); }
+      if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); if (e.type === "keydown") close(); }
       else if (e.code === "Space") { e.preventDefault(); e.stopImmediatePropagation(); }
     };
     window.addEventListener("keydown", key, true);
     window.addEventListener("keyup", key, true);
     return () => { window.removeEventListener("keydown", key, true); window.removeEventListener("keyup", key, true); };
-  }, [onClose]);
+  }, [close]);
 
   const shown = (s: Solve, i: number) => (win.trimmed.has(i) ? `(${timeText(s)})` : timeText(s));
   const first = win.solves[0].at, last = win.solves[win.solves.length - 1].at;
@@ -41,12 +49,12 @@ export function AverageDetail({ label, which, win, onClose }: {
   };
 
   return createPortal(
-    <div className="avg-detail" role="dialog" aria-modal="true" aria-label={`${label} ${which === "best" ? "best" : "current"}`}>
+    <div className={`avg-detail${fly && !leaving ? " fly" : ""}${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={`${label} ${which === "best" ? "best" : "current"}`}>
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>
             <span className="label">{label} · {which === "best" ? "Best" : "Current"}</span>
-            <div className="avg-detail-value">{fmt(win.value)}</div>
+            <div className="avg-detail-value" ref={valueRef}>{fmt(win.value)}</div>
             <small className="avg-detail-when">
               Solves {win.start + 1}–{win.start + win.solves.length} · {dateText(first)}
               {first !== last && ` – ${new Date(first).toDateString() === new Date(last).toDateString()
@@ -56,7 +64,7 @@ export function AverageDetail({ label, which, win, onClose }: {
           </div>
           <div className="avg-detail-actions">
             <button type="button" onClick={copy}>{copyLabel}</button>
-            <button type="button" className="overlay-close" aria-label="Close" onClick={onClose}>✕</button>
+            <button type="button" className="overlay-close" aria-label="Close" onClick={close}>✕</button>
           </div>
         </div>
         {win.trimmed.size > 0 && (

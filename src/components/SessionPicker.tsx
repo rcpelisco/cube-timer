@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import { knownCubes, nextName, type Session } from "../lib/sessions";
 import { PUZZLE_ORDER, PUZZLES, toPuzzle, type PuzzleId } from "../lib/puzzles";
 import type { SessionFields } from "../hooks/useSessions";
+import { useLeave } from "../hooks/useLeave";
 import { avgOf, fmt } from "../lib/stats";
 
 export interface SessionPickerProps {
@@ -22,20 +23,21 @@ export function SessionPicker(props: SessionPickerProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = list.find(s => s.id === currentId) ?? list[0];
+  const { leaving, close } = useLeave(() => setOpen(false), 120);
 
   useEffect(() => {
     if (!open) return;
-    const outside = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const outside = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) close(); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", esc); };
-  }, [open]);
+  }, [open, close]);
 
   return (
     <div className="session-picker" ref={ref}>
       <button type="button" className="session-trigger" aria-haspopup="true" aria-expanded={open}
-        title={current.cube ? `${current.name} · ${current.cube}` : current.name} onClick={() => setOpen(o => !o)}>
+        title={current.cube ? `${current.name} · ${current.cube}` : current.name} onClick={() => (open ? close() : setOpen(true))}>
         <PuzzleBadge puzzle={toPuzzle(current.puzzle)} />
         <span className="session-trigger-name">{current.name}</span>
         <span className="session-trigger-count">{current.solves.length}</span>
@@ -43,9 +45,9 @@ export function SessionPicker(props: SessionPickerProps) {
       </button>
 
       {open && (
-        <div className="session-menu">
+        <div className={`session-menu${leaving ? " leaving" : ""}`}>
           <div className="session-menu-head">Sessions</div>
-          <SessionManager {...props} onDone={() => setOpen(false)} />
+          <SessionManager {...props} onDone={close} />
         </div>
       )}
     </div>

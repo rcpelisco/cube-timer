@@ -1,14 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { avgOf, DNF, eff, fmt, MAX_NOTE, type Penalty, type Solve } from "../lib/stats";
 import { PUZZLES, type PuzzleId } from "../lib/puzzles";
 import { ScramblePreview } from "./ScramblePreview";
+import { useLeave } from "../hooks/useLeave";
+import { useFlyIn } from "../hooks/useFlyIn";
 
 // Full-screen view of one solve: time, penalties, date, the averages it ended, its scramble with
 // a picture of the scrambled puzzle, and a note you can write.
 // focusNote: open with the cursor in the note (from the Note button under the timer).
-export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, onNavigate, onClose, focusNote = false }: {
-  solves: Solve[]; i: number; puzzle: PuzzleId; focusNote?: boolean;
+// origin: the tapped time in the solve list, which the big time flies up out of as this opens.
+export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, onNavigate, onClose, focusNote = false, origin }: {
+  solves: Solve[]; i: number; puzzle: PuzzleId; focusNote?: boolean; origin?: HTMLElement;
   onPenalty: (i: number, pen: Penalty) => void; onDelete: (i: number) => void; onNote: (i: number, note: string) => void;
   onNavigate: (i: number) => void; onClose: () => void;
 }) {
@@ -16,6 +19,11 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
   // Which solve the delete confirmation is for, so it doesn't carry over when stepping to another.
   const [confirmAt, setConfirmAt] = useState<number | null>(null);
   const confirmDelete = confirmAt === i;
+  const { leaving, close } = useLeave(onClose);
+  // The tapped time shows in the list again on closing, or on stepping to another solve.
+  const [firstI] = useState(i);
+  const valueRef = useRef<HTMLDivElement>(null);
+  const fly = useFlyIn(origin, valueRef, leaving || i !== firstI);
 
   // Esc closes. Space and arrow keys don't reach the timer behind this view; in the note they
   // still type and move the cursor. Left/right step to the previous/next solve.
@@ -24,7 +32,7 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
       const typing = (e.target as Element | null)?.matches?.("textarea, input");
       if (e.key === "Escape") {
         e.preventDefault(); e.stopImmediatePropagation();
-        if (e.type === "keydown") onClose();
+        if (e.type === "keydown") close();
       } else if (e.code === "Space" || e.key.startsWith("Arrow")) {
         e.stopImmediatePropagation();
         if (typing) return;
@@ -37,7 +45,7 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
     window.addEventListener("keydown", key, true);
     window.addEventListener("keyup", key, true);
     return () => { window.removeEventListener("keydown", key, true); window.removeEventListener("keyup", key, true); };
-  }, [i, solves.length, onClose, onNavigate]);
+  }, [i, solves.length, close, onNavigate]);
 
   if (!s) return null;
 
@@ -47,12 +55,12 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
   const when = new Date(s.at).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
   return createPortal(
-    <div className="avg-detail solve-detail" role="dialog" aria-modal="true" aria-label={`Solve ${i + 1}`}>
+    <div className={`avg-detail solve-detail${fly && !leaving ? " fly" : ""}${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={`Solve ${i + 1}`}>
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>
             <span className="label">Solve {i + 1} of {solves.length} · {PUZZLES[puzzle].label}</span>
-            <div className={`avg-detail-value${s.pen === DNF ? " dnf" : ""}`}>
+            <div className={`avg-detail-value${s.pen === DNF ? " dnf" : ""}`} ref={valueRef}>
               {time}{s.pen === 2 && <span className="solve-pen"> +2</span>}
             </div>
             <small className="avg-detail-when">
@@ -62,7 +70,7 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
           <div className="avg-detail-actions">
             <button type="button" className="overlay-close" aria-label="Previous solve" disabled={i === 0} onClick={() => onNavigate(i - 1)}>‹</button>
             <button type="button" className="overlay-close" aria-label="Next solve" disabled={i === solves.length - 1} onClick={() => onNavigate(i + 1)}>›</button>
-            <button type="button" className="overlay-close" aria-label="Close" onClick={onClose}>✕</button>
+            <button type="button" className="overlay-close" aria-label="Close" onClick={close}>✕</button>
           </div>
         </div>
 

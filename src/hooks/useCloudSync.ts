@@ -161,8 +161,9 @@ export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions
   useEffect(() => {
     if (!user || !db || !ready.current) return;
     const state: SyncState = { sessions, inspection, algs: algPrefs };
-    if (stable(state) === lastWritten.current) return;
-    const t = setTimeout(() => push.current(state), 400);
+    // Compared inside the timeout, so serialising a big history doesn't hold up the screen as a
+    // solve finishes.
+    const t = setTimeout(() => { if (stable(state) !== lastWritten.current) push.current(state); }, 400);
     return () => clearTimeout(t);
   }, [user, sessions, inspection, algPrefs]);
 

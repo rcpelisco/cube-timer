@@ -1,14 +1,15 @@
+import { memo } from "react";
 import { avgOf, eff, fmt, type Solve } from "../lib/stats";
 
 const W = 400, H = 120, L = 44, R = 8, T = 8, B = 10;
 
-export function TrendChart({ solves }: { solves: Solve[] }) {
+export const TrendChart = memo(function TrendChart({ solves }: { solves: Solve[] }) {
   const start = Math.max(0, solves.length - 50);
   const pts: [number, number][] = [], aoPts: [number, number][] = [];
   for (let i = start; i < solves.length; i++) {
     const v = eff(solves[i]);
     if (isFinite(v)) pts.push([i, v]);
-    const a = avgOf(solves.slice(0, i + 1), 5);
+    const a = avgOf(solves.slice(Math.max(0, i - 4), i + 1), 5);
     if (a != null && isFinite(a)) aoPts.push([i, a]);
   }
 
@@ -19,7 +20,7 @@ export function TrendChart({ solves }: { solves: Solve[] }) {
       <div className="legend"><span className="l-single">Single</span><span className="l-ao5">Ao5</span></div>
     </div>
   );
-}
+});
 
 function Chart({ pts, aoPts, start, end }: { pts: [number, number][]; aoPts: [number, number][]; start: number; end: number }) {
   const all = pts.concat(aoPts).map(p => p[1]);

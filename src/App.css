@@ -146,6 +146,7 @@ table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nu
 .log .dnf { color: var(--hold); }
 .log .raw { color: var(--muted); }
 .empty-log { color: var(--muted); font-size: 13px; padding: 8px 0 4px; margin: 0; }
+.show-more { display: block; width: 100%; margin: 8px 0 4px; font-size: 12px; color: var(--muted); }
 
 /* Focus mode while the clock runs */
 .dimmable { transition: opacity 300ms; }
@@ -266,9 +267,23 @@ button:disabled { opacity: 0.5; cursor: default; }
 .overlay-head { position: absolute; top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: flex; justify-content: space-between; align-items: center; }
 .overlay-close { width: 36px; height: 36px; padding: 0; border-radius: 50%; font-size: 15px; }
 .preview.scramble-zoom { min-height: 0; }
+/* Sized boxes, so the flight between them can be measured before the drawing has loaded. */
+.thumb-pic, .zoom-pic { display: grid; place-items: center; }
+.zoom-pic { width: min(92vw, 560px); aspect-ratio: 4 / 3; }
+.zoom-pic:has(.preview-fto) { aspect-ratio: 2 / 1; }
 .scramble-zoom twisty-player, .scramble-zoom .cube-net { width: min(92vw, 560px); height: calc(min(92vw, 560px) * 0.75); }
 .scramble-zoom.preview-fto twisty-player { height: calc(min(92vw, 560px) * 0.5); }
 .scramble-overlay .moves { margin: 0; max-width: 560px; text-align: center; }
+/* Text size buttons (A− / A+): --scr-scale multiplies the usual scramble size. */
+.scramble-overlay .moves { font-size: calc(clamp(17px, 2.3vw, 22px) * var(--scr-scale, 1)); }
+.scramble-overlay .moves-444 { font-size: calc(clamp(15px, 1.8vw, 18px) * var(--scr-scale, 1)); }
+.overlay-actions { display: flex; align-items: center; gap: 10px; }
+.text-size { display: flex; height: 36px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.text-size button { width: 42px; height: 100%; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; font-weight: 600; line-height: 1; display: grid; place-items: center; }
+.text-size button + button { border-left: 1px solid var(--line); }
+.text-size button:disabled { opacity: 0.35; }
+.text-size .a-small { font-size: 12px; }
+.text-size .a-big { font-size: 18px; }
 .overlay-hint { margin: 0; color: var(--muted); font-size: 13px; }
 
 /* Focus-mode transition. The time gets its own view-transition name, so the browser glides it
@@ -473,13 +488,6 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before {
 .case-detail-body.slide-prev { animation: slide-from-left 200ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .case-detail-body.slide-next, .case-detail-body.slide-prev { animation: none; } }
 
-/* Full-screen scrambled state: zooms out of the thumbnail (--ox/--oy = its centre) and back in. */
-@keyframes scramble-zoom-in { from { opacity: 0; transform: scale(0.2); } }
-@keyframes scramble-zoom-out { to { opacity: 0; transform: scale(0.2); } }
-.scramble-overlay { transform-origin: var(--ox, 50%) var(--oy, 50%); }
-.scramble-overlay.zoom-in { animation: scramble-zoom-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1); }
-.scramble-overlay.zoom-out { animation: scramble-zoom-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards; pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .scramble-overlay.zoom-in, .scramble-overlay.zoom-out { animation: none; } }
 
 /* ---------- Phones: bottom tab bar layout ---------- */
 .tabbar {
@@ -800,3 +808,42 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .solve-note textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .avg-detail-list li:has(.avg-note) { grid-template-areas: "n time date" "n scr scr" "n note note"; }
 .avg-note { grid-area: note; font-size: 13px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+
+/* Popups: full-screen views rise and fade in, and sink and fade out as they close (useLeave). */
+@keyframes popup-in { from { opacity: 0; transform: translateY(14px); } }
+@keyframes popup-out { to { opacity: 0; transform: translateY(10px); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.96); } }
+@keyframes pop-out { to { opacity: 0; transform: scale(0.96); } }
+@keyframes drop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+@keyframes drop-out { to { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+.avg-detail, .case-detail { animation: popup-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.avg-detail.leaving, .case-detail.leaving { animation: popup-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards; pointer-events: none; }
+.cube-popup-backdrop { animation: fade-in 180ms ease-out; }
+.cube-popup-backdrop .cube-popup { animation: pop-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.cube-popup-backdrop.leaving { animation: fade-out 160ms ease-in forwards; pointer-events: none; }
+.cube-popup-backdrop.leaving .cube-popup { animation: pop-out 160ms ease-in forwards; }
+.session-menu { transform-origin: top left; animation: drop-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.session-menu.leaving { animation: drop-out 120ms ease-in forwards; pointer-events: none; }
+.session-new.page { animation: drop-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .avg-detail, .case-detail, .cube-popup-backdrop, .cube-popup-backdrop .cube-popup, .session-menu, .session-new.page { animation: none !important; }
+}
+/* An average opened from Statistics: its value flies from the cell up to the header (AverageDetail),
+   so the view's background only fades in, and the rest follows the value in. Closing is the usual slide. */
+@keyframes bg-in { from { background-color: transparent; } }
+.avg-detail.fly { animation: bg-in 220ms ease-out; }
+.avg-detail-value { transform-origin: 0 0; width: fit-content; }
+.avg-detail.fly .avg-detail-inner > :not(.avg-detail-head), .avg-detail.fly .avg-detail-head > :not(:first-child),
+.avg-detail.fly .avg-detail-head .label, .avg-detail.fly .avg-detail-when { animation: popup-in 320ms 60ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+@media (prefers-reduced-motion: reduce) { .avg-detail.fly, .avg-detail.fly * { animation: none !important; } }
+
+/* Scrambled state, full screen: the picture flies between the thumbnail and the middle
+   (ScrambleThumb), while the background and the text fade in around it and out again. */
+.scramble-overlay { animation: bg-in 220ms ease-out; }
+.scramble-overlay > :not(.zoom-pic) { animation: fade-in 260ms 80ms ease-out backwards; }
+.scramble-overlay.closing { animation: bg-out 240ms ease-in forwards; pointer-events: none; }
+.scramble-overlay.closing > :not(.zoom-pic) { animation: fade-out 120ms ease-in forwards; }
+@keyframes bg-out { to { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .scramble-overlay, .scramble-overlay > * { animation: none !important; } }
