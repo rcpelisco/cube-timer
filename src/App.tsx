@@ -214,7 +214,7 @@ export default function App() {
         onView={setView}
       />
 
-      {view === "algs" && <AlgorithmsPage prefs={algPrefs} onTrain={() => setView("train")} />}
+      {view === "algs" && <AlgorithmsPage prefs={algPrefs} />}
       {view === "train" && <TrainerPage prefs={algPrefs} />}
       {view === "settings" && (
         <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
