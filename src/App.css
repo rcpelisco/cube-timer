@@ -128,16 +128,17 @@ body.solving .stage::after { box-shadow: inset 0 0 90px color-mix(in srgb, var(-
 .stage.ready .time { animation: time-go 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes time-go { 50% { transform: scale(1.04); } }
 /* Landed: the time starts in the accent colour and settles back, with a fading glow. */
-.stage.landed { --glow: var(--accent); }
+.stage.landed { --glow: var(--accent); --land: var(--accent); }
+.stage.landed.goal { --glow: var(--ready); --land: var(--ready); }
 .stage.landed::after { animation: glow-land 900ms ease-out; }
 .stage.landed .time { animation: time-land 900ms ease-out; }
 @keyframes glow-land { from { opacity: 0.9; } to { opacity: 0; } }
-@keyframes time-land { from { color: var(--accent); transform: scale(1.03); } 40% { transform: none; } }
+@keyframes time-land { from { color: var(--land); transform: scale(1.03); } 40% { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .stage.ready .time { animation: none; }
   .stage.landed .time { animation: time-land-still 900ms ease-out; }
 }
-@keyframes time-land-still { from { color: var(--accent); } }
+@keyframes time-land-still { from { color: var(--land); } }
 .stage.inspect .time { color: var(--accent); }
 .stage.inspect.warn8 .time { color: var(--warn); }
 .stage.inspect.warn12 .time { color: var(--hold); }

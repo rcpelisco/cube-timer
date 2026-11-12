@@ -87,8 +87,12 @@ export default function App() {
   // already worked out for that list instead of going through the whole session again.
   const [pb, setPb] = useState<{ at: number; prev: Solve[] } | null>(null);
 
-  // Just stopped: the time lands with a short accent flash (see .stage.landed).
+  // Just stopped: the time lands with a short accent flash (see .stage.landed), green instead
+  // when it beats the session's sub-X goal (.stage.landed.goal).
   const [landed, setLanded] = useState(0);
+  const [landedGoal, setLandedGoal] = useState(false);
+  const goalRef = useRef(current.goal);
+  goalRef.current = current.goal;
   useEffect(() => {
     if (!landed) return;
     const id = setTimeout(() => setLanded(0), 1000);
@@ -105,6 +109,7 @@ export default function App() {
     if (newBests(prev, solve).length) { setPb({ at: solve.at, prev }); fireConfetti(); }
     setSolves(list => [...list, solve]);
     setLanded(solve.at);
+    setLandedGoal(!!goalRef.current && eff(solve) < goalRef.current);
     if (round.live) recordAttempt(solve.at);
     nextScramble();
   }, [setSolves, nextScramble, recordAttempt]);
@@ -249,6 +254,7 @@ export default function App() {
     timer.warn === 8 && "warn8",
     timer.warn === 12 && "warn12",
     landed && !active && "landed",
+    landed && !active && landedGoal && "goal",
   ].filter(Boolean).join(" ");
 
   const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut };
