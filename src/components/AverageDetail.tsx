@@ -8,6 +8,10 @@ import { useFlyIn } from "../hooks/useFlyIn";
 // A solve's time as listed in an average: "12.34", "14.34+" for +2, "DNF".
 const timeText = (s: Solve) => (s.pen === DNF ? "DNF" : `${fmt(eff(s))}${s.pen === 2 ? "+" : ""}`);
 
+// Long averages (Ao1000 and up) list their solves a page at a time: drawing thousands of rows at
+// once holds up the opening by a second or more.
+const PAGE = 100, MORE = 500;
+
 const dateText = (at: number) =>
   new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
@@ -19,6 +23,7 @@ export function AverageDetail({ label, which, win, origin, onClose }: {
   label: string; which: "current" | "best"; win: AverageWindow; origin?: HTMLElement; onClose: () => void;
 }) {
   const [copyLabel, setCopyLabel] = useState("Copy");
+  const [limit, setLimit] = useState(PAGE);
   const valueRef = useRef<HTMLDivElement>(null);
   const { leaving, close } = useLeave(onClose);
   const fly = useFlyIn(origin, valueRef, leaving);
@@ -71,7 +76,7 @@ export function AverageDetail({ label, which, win, origin, onClose }: {
           <p className="setting-note">Times in brackets are the fastest and slowest, left out of the average.</p>
         )}
         <ol className="avg-detail-list">
-          {win.solves.map((s, i) => (
+          {win.solves.slice(0, limit).map((s, i) => (
             <li key={s.at + ":" + i} className={win.trimmed.has(i) ? "trimmed" : ""}>
               <span className="avg-n">{win.start + i + 1}</span>
               <span className={`avg-time${s.pen === DNF ? " dnf" : ""}`}>{shown(s, i)}</span>
@@ -81,6 +86,11 @@ export function AverageDetail({ label, which, win, origin, onClose }: {
             </li>
           ))}
         </ol>
+        {win.solves.length > limit && (
+          <button type="button" className="show-more" onClick={() => setLimit(l => l + MORE)}>
+            Show {Math.min(MORE, win.solves.length - limit)} more · {win.solves.length - limit} left
+          </button>
+        )}
       </div>
     </div>,
     document.body,
