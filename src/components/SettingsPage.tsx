@@ -18,6 +18,8 @@ import { toPuzzle } from "../lib/puzzles";
 import { TARGET_OPTIONS, useDailyTarget } from "../lib/dailyTarget";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
 import { appCheckSiteKey } from "../lib/firebase";
+import { cspReports } from "../lib/cspReports";
+import { useSyncExternalStore } from "react";
 
 // Settings: timer options, algorithms, sessions (with Copy times / Clear solves on the current
 // one), import & export, appearance, and your Google account / sync. Phones reach it from the tab
@@ -160,6 +162,27 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           </p>
         )}
       </div>
+      <CspReportList />
     </section>
+  );
+}
+
+// Only there when the security policy has blocked something (see lib/cspReports.ts).
+function CspReportList() {
+  const reports = useSyncExternalStore(cspReports.subscribe, cspReports.get);
+  if (!reports.length) return null;
+  return (
+    <details className="panel settings-group csp-reports">
+      <summary>Blocked by the security policy ({reports.length})</summary>
+      <ul>
+        {reports.map(r => (
+          <li key={r.directive + r.blocked}>
+            <b>{r.directive}</b> {r.blocked}
+            {r.source && <small>{r.source}</small>}
+          </li>
+        ))}
+      </ul>
+      <button type="button" onClick={cspReports.clear}>Clear</button>
+    </details>
   );
 }

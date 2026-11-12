@@ -1224,3 +1224,6 @@ body.solving .splits-badge { display: none; }
 .grecaptcha-badge { visibility: hidden; }
 .recaptcha-note { font-size: 11.5px; margin-top: 10px; }
 .recaptcha-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.csp-reports summary { cursor: pointer; font-weight: 600; }
+.csp-reports ul { margin: 10px 0; padding-left: 18px; font: 400 12px/1.5 var(--font-num); overflow-wrap: anywhere; }
+.csp-reports small { display: block; color: var(--muted); }

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "preview:csp": "vite build && CSP_ENFORCE=1 vite preview",
     "check:algs": "node scripts/check-algs.ts",
     "test:rules": "npx firebase-tools@14.9.0 emulators:exec --only firestore --project demo-cube-timer \"node scripts/test-rules.ts\"",
     "deploy": "npm run check:algs && npm run lint && npm run build && npx firebase-tools@14.9.0 deploy --only hosting,firestore:rules"

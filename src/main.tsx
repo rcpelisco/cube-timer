@@ -5,6 +5,10 @@ import "@fontsource-variable/archivo/wght.css";
 import "@fontsource-variable/chivo-mono/wght.css";
 import App from "./App.tsx";
 import { applyTheme, themeStore } from "./lib/theme";
+import { watchCspReports } from "./lib/cspReports";
+
+// Before anything renders, so a blocked request during start-up is caught too.
+watchCspReports();
 
 // Saved Light/Dark choice: index.html already set the colors; this also sets the status-bar color.
 applyTheme(themeStore.get());

@@ -1,9 +1,28 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import { readFileSync } from "node:fs";
+
+// The headers Firebase Hosting sends on every page (firebase.json), so `vite preview` serves the
+// built app under the same security policy. CSP_ENFORCE=1 turns the report-only policy into a
+// real one, to see what would break before switching it on in firebase.json.
+function hostingHeaders(): Record<string, string> {
+  const hosting = JSON.parse(readFileSync(new URL("./firebase.json", import.meta.url), "utf8")).hosting;
+  const all = hosting.headers.find((h: { source: string }) => h.source === "**")?.headers ?? [];
+  const out: Record<string, string> = {};
+  for (const { key, value } of all as { key: string; value: string }[]) {
+    if (key === "Content-Security-Policy-Report-Only" && process.env.CSP_ENFORCE) {
+      out["Content-Security-Policy"] = `${value}; ${out["Content-Security-Policy"] ?? ""}`.replace(/; $/, "");
+    } else if (key === "Content-Security-Policy" && out["Content-Security-Policy"]) {
+      out[key] = `${out[key]}; ${value}`;
+    } else out[key] = value;
+  }
+  return out;
+}
 
 // https://vite.dev/config/
 export default defineConfig({
+  preview: { headers: hostingHeaders() },
   // cubing.js runs its scramble search in a module worker that lazy-loads more code. Two things keep
   // that worker from loading the app itself (which needs `document` and crashes in a worker):
   // the preload helper gets its own chunk instead of living in the main bundle, and preloading is
