@@ -32,6 +32,7 @@ import { QuickStats } from "./components/QuickStats";
 import { TodayRing } from "./components/TodayRing";
 import { TrainerPage } from "./components/TrainerPage";
 import { TimeDisplay } from "./components/TimeDisplay";
+import { InspectRing } from "./components/InspectRing";
 import { SettingsPage } from "./components/SettingsPage";
 import { SolveActions } from "./components/SolveActions";
 import "./App.css";
@@ -244,6 +245,7 @@ export default function App() {
 
         <div className={stageClass} ref={stageRef}>
           <TodayRing sessions={sessions.sessions} />
+          {timer.phase === "inspect" && <InspectRing />}
           <TimeDisplay shown={shown} running={timer.phase === "running"} />
           {timer.phase === "running" && phases > 1 && <SplitsLine marks={timer.marks} phases={phases} puzzle={puzzle} live />}
           {!active && last?.sp && <SplitsLine marks={last.sp} t={last.t} phases={last.sp.length + 1} puzzle={puzzle} />}

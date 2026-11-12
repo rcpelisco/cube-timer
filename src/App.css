@@ -986,3 +986,24 @@ body.solving .today-ring { display: none; }
 .worst-result small { display: block; margin-top: 8px; color: var(--muted); font-size: 12px; }
 .trainer-stats .worst-head h2 { margin: 0; }
 .trainer-stats tr.drilling td:first-child { color: var(--accent); }
+
+/* Inspection: a ring around the countdown that empties over 15 s (components/InspectRing.tsx).
+   Centred on the stage like the time is in focus mode, and drawn before the time (which is
+   positioned so it stays on top). */
+.stage .time { position: relative; }
+.insp-ring {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(clamp(170px, 48vw, 460px), 72svh); height: auto; pointer-events: none;
+}
+.insp-track { fill: none; stroke: var(--line); stroke-width: 2.5; }
+.insp-fill {
+  fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round;
+  stroke-dashoffset: 0; animation: insp-drain 15s linear forwards; transition: stroke 200ms;
+}
+.stage.warn8 .insp-fill { stroke: var(--warn); }
+.stage.warn12 .insp-fill { stroke: var(--hold); }
+/* Past 15 s (+2), the empty ring pulses until you start or it's a DNF at 17 s. */
+.stage .insp-track { animation: insp-over 500ms 15s ease-in-out infinite alternate; }
+@keyframes insp-drain { to { stroke-dashoffset: var(--insp-c); } }
+@keyframes insp-over { to { stroke: var(--hold); } }
+@media (prefers-reduced-motion: reduce) { .stage .insp-track { animation: none; } }

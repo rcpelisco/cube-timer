@@ -11,6 +11,7 @@ import { useFocusMode } from "../hooks/useFocusMode";
 import { CaseDiagram } from "./CaseDiagram";
 import { AlgText } from "./AlgText";
 import { TimeDisplay } from "./TimeDisplay";
+import { InspectRing } from "./InspectRing";
 
 const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
 const COLOR_NAME: Record<string, string> = Object.fromEntries(CROSS_COLORS.map(c => [c.swatch, c.id]));
@@ -123,6 +124,7 @@ export function DrillRun({ drill, level, plan, cross, choices, times, setStore }
       </div>
 
       <div className={stageClass} ref={stageRef}>
+        {timer.phase === "inspect" && <InspectRing />}
         <TimeDisplay shown={shown} running={timer.phase === "running"} />
         <div className="hint dimmable">{hint}</div>
         <div className="last-actions dimmable">
