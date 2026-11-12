@@ -6,6 +6,7 @@ import {
   type RefObject,
 } from "react";
 import { DNF, fmt, type Penalty } from "../lib/stats";
+import { buzz, BUZZ } from "../lib/haptics";
 
 // Stackmat-style timer: hold until ready (green), release to start, any key or tap to stop.
 // Optional WCA inspection: 15 s countdown, +2 after 15 s, DNF after 17 s.
@@ -106,6 +107,7 @@ export function useTimer({
 
     const finish = (t: number, pen: Penalty) => {
       cancelAnimationFrame(st.raf);
+      buzz(BUZZ.stop);
       st.phase = "idle";
       st.holding = st.ready = false;
       sync({ display: null, warn: 0 });
@@ -147,6 +149,7 @@ export function useTimer({
         if (opts.current.phases > 1 && now - prev < MIN_PHASE_MS) return;
         if (st.marks.length < opts.current.phases - 1) {
           st.marks = [...st.marks, Math.round(now)];
+          buzz(BUZZ.mark);
           sync({ marks: st.marks });
           return;
         }
@@ -162,6 +165,7 @@ export function useTimer({
       clearTimeout(st.holdTimer);
       st.holdTimer = window.setTimeout(() => {
         st.ready = true;
+        buzz(BUZZ.ready);
         sync();
       }, HOLD_MS);
       sync(st.phase === "idle" ? { display: "0.00" } : {});

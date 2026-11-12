@@ -11,6 +11,7 @@ import { exportFileName, saveTextFile } from "../lib/saveFile";
 import { ImportCsTimer } from "./ImportCsTimer";
 import { useBoolPref } from "../lib/boolPref";
 import { inspectionCallsPref } from "../lib/inspectionCalls";
+import { canVibrate, hapticsPref } from "../lib/haptics";
 import { SplitPhasesSetting } from "./SplitPhasesSetting";
 import { toPuzzle } from "../lib/puzzles";
 import { TARGET_OPTIONS, useDailyTarget } from "../lib/dailyTarget";
@@ -30,6 +31,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   const [hideTime, setHideTime] = useHideTime();
   const [showTriggers, setShowTriggers] = useShowTriggers();
   const [calls, setCalls] = useBoolPref(inspectionCallsPref);
+  const [haptics, setHaptics] = useBoolPref(hapticsPref);
   const puzzle = toPuzzle(sessions.list.find(x => x.id === sessions.currentId)?.puzzle);
   const [target, setTarget] = useDailyTarget();
 
@@ -62,6 +64,16 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           <input type="checkbox" className="switch" id="opt-hide-time" checked={hideTime}
             onChange={e => setHideTime(e.target.checked)} />
         </label>
+        {canVibrate && (
+          <label className="setting-row" htmlFor="opt-haptics">
+            <span>
+              <b>Vibrate</b>
+              <small>A short buzz when the timer turns green, at each split and when you stop.</small>
+            </span>
+            <input type="checkbox" className="switch" id="opt-haptics" checked={haptics}
+              onChange={e => setHaptics(e.target.checked)} />
+          </label>
+        )}
         <SplitPhasesSetting puzzle={puzzle} />
         <div className="setting-row stacked">
           <span>

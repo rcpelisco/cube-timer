@@ -143,12 +143,24 @@ export async function drawCard(d: CardData): Promise<Blob> {
   ctx.font = `700 34px ${UI}`;
   ctx.fillStyle = C.ink;
   ctx.fillText(brand, W - PAD - bw, fy);
-  // A small 3×3 face as the mark.
-  const s = 13, g = 3, mx = W - PAD - bw - 16 - (s * 3 + g * 2), my = fy - 33;
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
-    roundRect(ctx, mx + c * (s + g), my + r * (s + g), s, s, 3);
-    ctx.fillStyle = (r + c) % 2 ? C.accent : C.ink; ctx.fill();
+  // The app icon's mark (public/icon.svg, drawn in its own 512 units): a 3×3 face in a stopwatch ring.
+  const k = 52 / 366;
+  ctx.save();
+  ctx.translate(W - PAD - bw - 16 - 336 * k - 88 * k, fy + 8 - 440 * k);
+  ctx.scale(k, k);
+  ctx.fillStyle = C.accent;
+  roundRect(ctx, 226, 78, 60, 30, 10); ctx.fill();
+  ctx.fillRect(246, 100, 20, 12);
+  ctx.lineWidth = 28;
+  ctx.strokeStyle = C.line;
+  ctx.beginPath(); ctx.arc(256, 272, 150, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = C.accent; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.arc(256, 272, 150, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.72); ctx.stroke();
+  for (let i = 0; i < 9; i++) {
+    roundRect(ctx, 181 + (i % 3) * 52, 197 + Math.floor(i / 3) * 52, 46, 46, 10);
+    ctx.fillStyle = i % 2 ? C.accent : C.ink; ctx.fill();
   }
+  ctx.restore();
 
   return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error("Couldn't draw the card"))), "image/png"));
 }
