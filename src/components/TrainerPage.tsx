@@ -7,7 +7,7 @@ import { CROSS_COLORS } from "../lib/crossColor";
 import { fmt } from "../lib/stats";
 import { CROSS_LEVELS, type Drill } from "../lib/drills";
 import { DrillRun } from "./TrainerDrill";
-import { addTime, caseScramble, caseStats, casesFor, loadTrainer, nextCase, saveTrainer, type TrainerState } from "../lib/trainer";
+import { addTime, caseScramble, caseStats, casesFor, caseWeights, loadTrainer, nextCase, saveTrainer, type TrainerState } from "../lib/trainer";
 import { useTimer } from "../hooks/useTimer";
 import { useFocusMode } from "../hooks/useFocusMode";
 import type { useAlgPrefs } from "../hooks/useAlgPrefs";
@@ -103,6 +103,10 @@ export function TrainerPage({ prefs: { prefs } }: { prefs: ReturnType<typeof use
             );
           })}
         </div>
+        <label className="trainer-plan">
+          <input type="checkbox" className="switch" checked={store.focus} onChange={e => setStore(s => ({ ...s, focus: e.target.checked }))} />
+          Favour slow cases
+        </label>
         {byStatus.length > 0 && (
           <CasePicker cases={byStatus} allIds={all.map(c => c.id)} picked={picked} onChange={setPicked}
             choices={prefs.choices} cross={cross} />
@@ -119,15 +123,15 @@ export function TrainerPage({ prefs: { prefs } }: { prefs: ReturnType<typeof use
             : <>No cases picked. Open <b>Cases</b> above and choose some.</>}
         </p>
       ) : (
-        <TrainerRun pool={pool} poolKey={poolKey} set={store.set} times={store.times} setStore={setStore} prefs={prefs} />
+        <TrainerRun pool={pool} poolKey={poolKey} set={store.set} times={store.times} focus={store.focus} setStore={setStore} prefs={prefs} />
       )}
     </section>
   );
 }
 
 // The timed part: mounted only while there are cases, so the timer always has its stage.
-function TrainerRun({ pool, poolKey, set, times, setStore, prefs }: {
-  pool: AlgCase[]; poolKey: string; set: AlgSet; times: TrainerState["times"];
+function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
+  pool: AlgCase[]; poolKey: string; set: AlgSet; times: TrainerState["times"]; focus: boolean;
   setStore: Dispatch<SetStateAction<TrainerState>>; prefs: AlgPrefs;
 }) {
   const { cross } = prefs;
@@ -151,7 +155,16 @@ function TrainerRun({ pool, poolKey, set, times, setStore, prefs }: {
   useEffect(() => { loadRef.current = load; }, [load]);
   const poolRef = useRef(pool);
   useEffect(() => { poolRef.current = pool; }, [pool]);
-  useEffect(() => { loadRef.current(nextCase(poolRef.current)); }, [poolKey]);
+  const timesRef = useRef(times);
+  useEffect(() => { timesRef.current = times; }, [times]);
+  const focusRef = useRef(focus);
+  useEffect(() => { focusRef.current = focus; }, [focus]);
+  // The next case: favouring slow and little-practised ones when that's on.
+  const pickNext = useCallback((previous?: string, t = timesRef.current) => {
+    const p = poolRef.current;
+    return nextCase(p, previous, focusRef.current ? caseWeights(p, t) : undefined);
+  }, []);
+  useEffect(() => { loadRef.current(pickNext()); }, [poolKey, pickNext]);
 
   const attemptRef = useRef(attempt);
   useEffect(() => { attemptRef.current = attempt; }, [attempt]);
@@ -160,8 +173,10 @@ function TrainerRun({ pool, poolKey, set, times, setStore, prefs }: {
     if (!a?.scramble) return;
     setStore(s => ({ ...s, times: { ...s.times, [a.c.id]: addTime(s.times[a.c.id], t) } }));
     setLast({ c: a.c, t });
-    loadRef.current(nextCase(poolRef.current, a.c.id));
-  }, [setStore]);
+    // Weighed with this time included, so a slow solve makes the case come up sooner.
+    const now = timesRef.current;
+    loadRef.current(pickNext(a.c.id, { ...now, [a.c.id]: addTime(now[a.c.id], t) }));
+  }, [setStore, pickNext]);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const timer = useTimer({ stageRef, inspection: false, onFinish, enabled: !!attempt?.scramble });
@@ -180,8 +195,10 @@ function TrainerRun({ pool, poolKey, set, times, setStore, prefs }: {
   const stageClass = ["stage", timer.holding && !timer.ready && "holding", timer.ready && "ready"].filter(Boolean).join(" ");
 
   // Slowest first, so the cases that need work are at the top.
+  const weights = focus ? caseWeights(pool, times) : null;
+  const weightSum = weights ? weights.reduce((a, b) => a + b, 0) : 0;
   const rows = pool
-    .map(c => ({ c, ...caseStats(times[c.id]) }))
+    .map((c, i) => ({ c, ...caseStats(times[c.id]), chance: weights ? weights[i] / weightSum : null }))
     .sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
   const lastStats = last ? caseStats(times[last.c.id]) : null;
   const front = COLOR_NAME[crossInfo.faces.F];
@@ -201,7 +218,7 @@ function TrainerRun({ pool, poolKey, set, times, setStore, prefs }: {
                   ? <span className="moves pending" role="alert">Couldn't make a scramble for this case.</span>
                   : <span className="moves pending" aria-live="polite">Generating scramble…</span>}
             </div>
-            <button type="button" onClick={() => load(nextCase(pool, attempt?.c.id))}>Skip case</button>
+            <button type="button" onClick={() => load(pickNext(attempt?.c.id))}>Skip case</button>
           </div>
 
           <div className={stageClass} ref={stageRef}>
@@ -230,11 +247,12 @@ function TrainerRun({ pool, poolKey, set, times, setStore, prefs }: {
           <div className="panel trainer-stats dimmable">
             <h2>Your cases · slowest first</h2>
             <table>
-              <thead><tr><th>Case</th><th>Avg 5</th><th>Best</th><th>Times</th></tr></thead>
+              <thead><tr><th>Case</th><th>Avg 5</th><th>Best</th><th>Times</th>{weights && <th title="How likely the case is to come up next">Odds</th>}</tr></thead>
               <tbody>
                 {rows.map(r => (
                   <tr key={r.c.id} className={r.reps ? "" : "untried"}>
                     <td>{r.c.name}</td><td>{fmt(r.avg)}</td><td>{fmt(r.best)}</td><td>{r.reps}</td>
+                    {r.chance != null && <td className="odds">{r.chance >= 0.095 ? Math.round(r.chance * 100) : (r.chance * 100).toFixed(1)}%</td>}
                   </tr>
                 ))}
               </tbody>
