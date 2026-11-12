@@ -1218,3 +1218,9 @@ body.solving .splits-badge { display: none; }
 .share-actions .share-main { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; }
 .share-status { flex-basis: 100%; text-align: center; font-size: 13px; color: var(--muted); min-height: 1.2em; }
 .share-card .avg-detail-when { display: block; margin-top: 2px; }
+
+/* App Check's reCAPTCHA badge would sit over the tab bar; Google allows hiding it when the notice
+   is shown in the sign-in flow instead (the Account section in Settings). */
+.grecaptcha-badge { visibility: hidden; }
+.recaptcha-note { font-size: 11.5px; margin-top: 10px; }
+.recaptcha-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }

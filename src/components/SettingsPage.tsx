@@ -17,6 +17,7 @@ import { AccentSetting } from "./AccentSetting";
 import { toPuzzle } from "../lib/puzzles";
 import { TARGET_OPTIONS, useDailyTarget } from "../lib/dailyTarget";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
+import { appCheckSiteKey } from "../lib/firebase";
 
 // Settings: timer options, algorithms, sessions (with Copy times / Clear solves on the current
 // one), import & export, appearance, and your Google account / sync. Phones reach it from the tab
@@ -152,6 +153,11 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
             </div>
             <button type="button" className="wide" onClick={onSignOut}>Sign out</button>
           </>
+        )}
+        {enabled && appCheckSiteKey && (
+          <p className="setting-note recaptcha-note">
+            Sync is protected by reCAPTCHA; the Google <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a> and <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Terms of Service</a> apply.
+          </p>
         )}
       </div>
     </section>

@@ -8,6 +8,9 @@ export const firebaseConfig = {
 
 export const firebaseEnabled = Object.values(firebaseConfig).every(Boolean);
 
+// App Check's reCAPTCHA Enterprise site key (public, like the config above); without it App Check is off.
+export const appCheckSiteKey = import.meta.env.VITE_APPCHECK_SITE_KEY || "";
+
 // The Firebase SDK is about a third of the app's code, so it isn't part of the first load: it's
 // fetched when you sign in, or straight after start-up if you may be signed in
 // (hooks/useAuth.ts). Loaded once; later calls get the same module.
