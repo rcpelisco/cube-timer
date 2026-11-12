@@ -275,7 +275,7 @@ export default function App() {
           </div>
         ) : (
           <div className="lower dimmable">
-            <TrendChart solves={solves} goal={current.goal} />
+            <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} />
             <div className="panel net">
               <h2>Scrambled state</h2>
               <ScramblePreview puzzle={puzzle} moves={scramble?.moves ?? null} />
@@ -289,7 +289,7 @@ export default function App() {
           <section className="solves-page">
             <div className="solves-actions"><SolveActions solves={solves} onClear={() => setSolves(() => [])} /></div>
             {statsPanel}
-            <TrendChart solves={solves} goal={current.goal} />
+            <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} />
             {solveList}
           </section>
         )

@@ -885,8 +885,19 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .trainer-ll-step > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .trainer-ll-step .trainer-diagram { width: 76px; }
 
-/* Chart card tabs: Trend, Spread */
+/* Chart card tabs: Trend, Spread, Days */
 .chart-tabs { margin-bottom: 10px; }
 .chart-tabs button { padding: 4px 10px; font-size: 12px; }
-.spread-legend span::before { display: none; }
-.spread-legend b { color: var(--ink); font: 500 12px var(--font-num); }
+.spread-legend span::before, .days-legend span::before { display: none; }
+.spread-legend b, .days-legend b { color: var(--ink); font: 500 12px var(--font-num); }
+.days-grid { display: block; width: 100%; height: auto; max-height: 190px; }
+.trend svg.days-grid { height: auto; }
+.days-legend { align-items: center; flex-wrap: wrap; }
+.days-scale { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; }
+.days-scale i { width: 10px; height: 10px; border-radius: 2px; }
+.days-grid .day-0 { fill: var(--line); } .days-scale .day-0 { background: var(--line); }
+.days-grid .day-1 { fill: color-mix(in srgb, var(--accent) 30%, var(--surface)); } .days-scale .day-1 { background: color-mix(in srgb, var(--accent) 30%, var(--surface)); }
+.days-grid .day-2 { fill: color-mix(in srgb, var(--accent) 55%, var(--surface)); } .days-scale .day-2 { background: color-mix(in srgb, var(--accent) 55%, var(--surface)); }
+.days-grid .day-3 { fill: color-mix(in srgb, var(--accent) 78%, var(--surface)); } .days-scale .day-3 { background: color-mix(in srgb, var(--accent) 78%, var(--surface)); }
+.days-grid .day-4 { fill: var(--accent); } .days-scale .day-4 { background: var(--accent); }
+.days-grid .day-today { stroke: var(--ink); stroke-width: 1; }

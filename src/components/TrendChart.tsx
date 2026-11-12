@@ -1,18 +1,21 @@
 import { memo, useState } from "react";
 import { avgOf, eff, fmt, type Solve } from "../lib/stats";
+import type { Session } from "../lib/sessions";
 import { Spread } from "./Spread";
+import { Days } from "./Days";
 
 const W = 400, H = 120, L = 44, R = 8, T = 8, B = 10;
 
-type Tab = "trend" | "spread";
-const TABS: { id: Tab; label: string }[] = [{ id: "trend", label: "Trend" }, { id: "spread", label: "Spread" }];
+type Tab = "trend" | "spread" | "days";
+const TABS: { id: Tab; label: string }[] = [{ id: "trend", label: "Trend" }, { id: "spread", label: "Spread" }, { id: "days", label: "Days" }];
 const TAB_KEY = "cubeTimer.chartTab";
 const loadTab = (): Tab => {
-  try { const v = localStorage.getItem(TAB_KEY); return v === "spread" ? v : "trend"; } catch { return "trend"; }
+  try { const v = localStorage.getItem(TAB_KEY); return v === "spread" || v === "days" ? v : "trend"; } catch { return "trend"; }
 };
 
-// The chart card: the recent trend, or how the session's times spread out.
-export const TrendChart = memo(function TrendChart({ solves, goal }: { solves: Solve[]; goal?: number }) {
+// The chart card: the recent trend, how the session's times spread out, or the days you practised.
+// sessions: every session, for the practice days (which count solves in all of them).
+export const TrendChart = memo(function TrendChart({ solves, goal, sessions }: { solves: Solve[]; goal?: number; sessions: Session[] }) {
   const [tab, setTab] = useState<Tab>(loadTab);
   const pick = (t: Tab) => { setTab(t); try { localStorage.setItem(TAB_KEY, t); } catch { /* ignore */ } };
   return (
@@ -22,7 +25,7 @@ export const TrendChart = memo(function TrendChart({ solves, goal }: { solves: S
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : ""} onClick={() => pick(t.id)}>{t.label}</button>
         ))}
       </div>
-      {tab === "trend" ? <Trend solves={solves} /> : <Spread solves={solves} goal={goal} />}
+      {tab === "trend" ? <Trend solves={solves} /> : tab === "spread" ? <Spread solves={solves} goal={goal} /> : <Days sessions={sessions} />}
     </div>
   );
 });
