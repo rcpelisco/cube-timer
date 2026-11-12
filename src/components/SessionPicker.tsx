@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { knownCubes, nextName, type Session } from "../lib/sessions";
+import { PuzzleArt } from "./PuzzleArt";
 import { PUZZLE_ORDER, PUZZLES, toPuzzle, type PuzzleId } from "../lib/puzzles";
 import type { SessionFields } from "../hooks/useSessions";
 import { useLeave } from "../hooks/useLeave";
@@ -192,6 +193,7 @@ function PuzzleChoice({ value, onChange, disabled }: { value: PuzzleId; onChange
       {PUZZLE_ORDER.map(p => (
         <button key={p} type="button" role="radio" aria-checked={p === value} className={p === value ? "on" : ""}
           disabled={disabled && p !== value} onClick={() => onChange(p)}>
+          <PuzzleArt puzzle={p} size={18} />
           {PUZZLES[p].short}
         </button>
       ))}
@@ -200,7 +202,7 @@ function PuzzleChoice({ value, onChange, disabled }: { value: PuzzleId; onChange
 }
 
 export function PuzzleBadge({ puzzle }: { puzzle: PuzzleId }) {
-  return <span className={`puzzle-badge puzzle-${puzzle}`} title={PUZZLES[puzzle].label}>{PUZZLES[puzzle].short}</span>;
+  return <span className={`puzzle-badge puzzle-${puzzle}`} title={PUZZLES[puzzle].label}><PuzzleArt puzzle={puzzle} size={15} />{PUZZLES[puzzle].short}</span>;
 }
 
 export function CubeGlyph() {

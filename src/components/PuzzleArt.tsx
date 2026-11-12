@@ -110,16 +110,19 @@ function fto() {
   </>;
 }
 
-const ART: Record<PuzzleId, () => ReactNode> = {
-  "222": () => nxn(2), "333": () => nxn(3), "444": () => nxn(4), "555": () => nxn(5), "666": () => nxn(6), "777": () => nxn(7),
+// Small drawings (badges, the puzzle picker) cap cubes at 3×3 stickers so the lines don't run
+// together; the label beside them says which cube it is.
+const ART: Record<PuzzleId, (small: boolean) => ReactNode> = {
+  "222": () => nxn(2), "333": () => nxn(3), "444": s => nxn(s ? 3 : 4), "555": s => nxn(s ? 3 : 5), "666": s => nxn(s ? 3 : 6), "777": s => nxn(s ? 3 : 7),
   pyram: pyraminx, skewb, minx: megaminx, sq1: square1, clock, fto,
 };
 
 export function PuzzleArt({ puzzle, size = 96 }: { puzzle: PuzzleId; size?: number }) {
+  const small = size < 40;
   return (
-    <svg className="puzzle-art" width={size} height={size} viewBox="0 0 120 120" aria-hidden="true"
+    <svg className={`puzzle-art${small ? " small" : ""}`} width={size} height={size} viewBox="0 0 120 120" aria-hidden="true"
       fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round">
-      {ART[puzzle]()}
+      {ART[puzzle](small)}
     </svg>
   );
 }
