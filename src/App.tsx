@@ -4,6 +4,7 @@ import { fireConfetti } from "./lib/confetti";
 import { load, save } from "./lib/storage";
 import { firebaseEnabled } from "./lib/firebase";
 import { PUZZLES, toPuzzle } from "./lib/puzzles";
+import { importCsTimer } from "./lib/csTimer";
 import { useTimer } from "./hooks/useTimer";
 import { useSessions } from "./hooks/useSessions";
 import { useScramble } from "./hooks/useScramble";
@@ -87,6 +88,11 @@ export default function App() {
   const setPenalty = (i: number, pen: Penalty) =>
     setSolves(list => list.map((s, j) => (j === i ? { ...s, pen: s.pen === pen ? 0 : pen } : s)));
   const deleteSolve = (i: number) => setSolves(list => list.filter((_, j) => j !== i));
+  const importFile = (text: string) => {
+    const result = importCsTimer(text, sessions.sessions);
+    if (result.added.length) sessions.setSessions(result.sessions);
+    return result;
+  };
 
   const last = solves[solves.length - 1];
   // Re-checked against the solve as it is now, so a +2, DNF or delete takes the badge away.
@@ -130,7 +136,7 @@ export default function App() {
       {view === "algs" && <AlgorithmsPage prefs={algPrefs} onTrain={() => setView("train")} />}
       {view === "train" && <TrainerPage prefs={algPrefs} />}
       {view === "settings" && (
-        <SettingsPage inspection={inspection} onInspection={setInspection} account={account}
+        <SettingsPage inspection={inspection} onInspection={setInspection} account={account} onImport={importFile}
           solveActions={isPhone ? undefined : { solves, onClear: () => setSolves(() => []), session: current.name }} />
       )}
 

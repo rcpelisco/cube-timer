@@ -8,6 +8,8 @@ import { useShowTriggers } from "../hooks/useShowTriggers";
 import { SolveActions } from "./SolveActions";
 import type { Solve } from "../lib/stats";
 import { useWakeLockStatus } from "../lib/wakeLockStatus";
+import type { ImportResult } from "../lib/csTimer";
+import { ImportCsTimer } from "./ImportCsTimer";
 
 // SHA-256 of the developer's email, so the debug card shows only for them without the address
 // itself being in the code or the public bundle.
@@ -49,9 +51,10 @@ function WakeLockDiagnostics() {
 // Settings: timer options, algorithms, appearance, and your Google account / sync. Phones reach it
 // from the tab bar; computers from the account menu (or the cog when signed out), and there it
 // also holds Copy times / Clear solves, which phones have on the Solves tab.
-export function SettingsPage({ inspection, onInspection, account, solveActions }: {
+export function SettingsPage({ inspection, onInspection, account, solveActions, onImport }: {
   inspection: boolean; onInspection: (v: boolean) => void; account: AccountProps;
   solveActions?: { solves: Solve[]; onClear: () => void; session: string };
+  onImport: (text: string) => ImportResult;
 }) {
   const { enabled, user, sync, error, onSignIn, onSignOut } = account;
   const name = user?.displayName || user?.email || "Signed in";
@@ -94,6 +97,8 @@ export function SettingsPage({ inspection, onInspection, account, solveActions }
           <div className="settings-actions"><SolveActions solves={solveActions.solves} onClear={solveActions.onClear} /></div>
         </div>
       )}
+
+      <ImportCsTimer onImport={onImport} />
 
       <div className="panel settings-group">
         <h2>Algorithms</h2>

@@ -712,3 +712,8 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 /* 2×2 algorithms */
 .algs-puzzle { align-self: flex-start; }
 .trainer-sets { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* csTimer import result */
+.import-result ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; }
+.import-result .muted { color: var(--muted); }
+.import-error { max-width: none; margin: 0; }
