@@ -620,7 +620,7 @@ body:not(.solving) .app.phone .stage .time { font-size: clamp(64px, 19vw, 120px)
 }
 .phone-shell { position: fixed; inset: 0; display: flex; flex-direction: column; }
 .page-scroll {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; /* x: no scrollbar as a page slides in */
   display: flex; flex-direction: column;
   padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 20px max(16px, env(safe-area-inset-left));
 }

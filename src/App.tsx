@@ -16,6 +16,7 @@ import { useMediaQuery } from "./hooks/useMediaQuery";
 import { useFocusMode } from "./hooks/useFocusMode";
 import { useTimerBgLayer } from "./hooks/useTimerBg";
 import { useView } from "./hooks/useView";
+import { usePageTransition } from "./hooks/usePageTransition";
 import { useAlgPrefs } from "./hooks/useAlgPrefs";
 import { AlgorithmsPage } from "./components/AlgorithmsPage";
 import { useAuth } from "./hooks/useAuth";
@@ -117,6 +118,7 @@ export default function App() {
   }, [setSolves, nextScramble, recordAttempt]);
 
   const [view, setView] = useView();
+  usePageTransition(view, isPhone);
   // Computers show solves and stats beside the timer, so "solves" is the timer page there.
   const showTimer = view === "timer" || (!isPhone && view === "solves");
   // The timer only listens for keys and taps while its page is showing.
