@@ -1,14 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The share cards' mark (lib/shareCard.ts: a 3×3 face, light corners and centre, blue edges)
+       inside a stopwatch ring. Everything sits within the middle 80% circle, so Android's round
+       (maskable) crop keeps the button on top. -->
   <rect width="512" height="512" fill="#131a23"/>
-  <g transform="translate(106 106)">
-    <rect x="0" y="0" width="92" height="92" rx="16" fill="#0a9a4a"/>
-    <rect x="104" y="0" width="92" height="92" rx="16" fill="#f4f4f4"/>
-    <rect x="208" y="0" width="92" height="92" rx="16" fill="#c8102e"/>
-    <rect x="0" y="104" width="92" height="92" rx="16" fill="#ffd500"/>
-    <rect x="104" y="104" width="92" height="92" rx="16" fill="#0051ba"/>
-    <rect x="208" y="104" width="92" height="92" rx="16" fill="#ff5800"/>
-    <rect x="0" y="208" width="92" height="92" rx="16" fill="#c8102e"/>
-    <rect x="104" y="208" width="92" height="92" rx="16" fill="#0a9a4a"/>
-    <rect x="208" y="208" width="92" height="92" rx="16" fill="#ffd500"/>
+  <rect x="226" y="78" width="60" height="30" rx="10" fill="#7aaeff"/>
+  <rect x="246" y="100" width="20" height="12" fill="#7aaeff"/>
+  <circle cx="256" cy="272" r="150" fill="none" stroke="#273140" stroke-width="28"/>
+  <circle cx="256" cy="272" r="150" fill="none" stroke="#7aaeff" stroke-width="28" stroke-linecap="round"
+    stroke-dasharray="678.6 942.5" transform="rotate(-90 256 272)"/>
+  <g transform="translate(181 197)">
+    <rect x="0" y="0" width="46" height="46" rx="10" fill="#e6ebf2"/>
+    <rect x="52" y="0" width="46" height="46" rx="10" fill="#7aaeff"/>
+    <rect x="104" y="0" width="46" height="46" rx="10" fill="#e6ebf2"/>
+    <rect x="0" y="52" width="46" height="46" rx="10" fill="#7aaeff"/>
+    <rect x="52" y="52" width="46" height="46" rx="10" fill="#e6ebf2"/>
+    <rect x="104" y="52" width="46" height="46" rx="10" fill="#7aaeff"/>
+    <rect x="0" y="104" width="46" height="46" rx="10" fill="#e6ebf2"/>
+    <rect x="52" y="104" width="46" height="46" rx="10" fill="#7aaeff"/>
+    <rect x="104" y="104" width="46" height="46" rx="10" fill="#e6ebf2"/>
   </g>
 </svg>
