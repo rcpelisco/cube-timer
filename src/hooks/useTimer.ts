@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { DNF, fmt, type Penalty } from "../lib/stats";
 
 // Stackmat-style timer: hold until ready (green), release to start, any key or tap to stop.
@@ -22,20 +28,50 @@ interface Options {
   enabled?: boolean; // false while another page is showing: keys and taps are ignored
 }
 
-export function useTimer({ stageRef, inspection, onFinish, enabled = true }: Options): TimerView {
-  const [view, setView] = useState<TimerView>({ phase: "idle", holding: false, ready: false, display: null, warn: 0 });
+export function useTimer({
+  stageRef,
+  inspection,
+  onFinish,
+  enabled = true,
+}: Options): TimerView {
+  const [view, setView] = useState<TimerView>({
+    phase: "idle",
+    holding: false,
+    ready: false,
+    display: null,
+    warn: 0,
+  });
   const opts = useRef({ inspection, onFinish, enabled });
-  useLayoutEffect(() => { opts.current = { inspection, onFinish, enabled }; });
+  useLayoutEffect(() => {
+    opts.current = { inspection, onFinish, enabled };
+  });
 
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
     const st = {
-      phase: "idle" as Phase, holding: false, ready: false, pendingInspect: false, swallowUp: false,
-      pointerArmed: false, downX: 0, downY: 0, t0: 0, inspStart: 0, inspPen: 0 as Penalty, raf: 0, holdTimer: 0,
+      phase: "idle" as Phase,
+      holding: false,
+      ready: false,
+      pendingInspect: false,
+      swallowUp: false,
+      pointerArmed: false,
+      downX: 0,
+      downY: 0,
+      t0: 0,
+      inspStart: 0,
+      inspPen: 0 as Penalty,
+      raf: 0,
+      holdTimer: 0,
     };
     const sync = (patch: Partial<TimerView> = {}) =>
-      setView(v => ({ ...v, phase: st.phase, holding: st.holding, ready: st.ready, ...patch }));
+      setView((v) => ({
+        ...v,
+        phase: st.phase,
+        holding: st.holding,
+        ready: st.ready,
+        ...patch,
+      }));
 
     const tick = () => {
       const now = performance.now();
@@ -43,67 +79,116 @@ export function useTimer({ stageRef, inspection, onFinish, enabled = true }: Opt
         sync({ display: fmt(now - st.t0) });
       } else if (st.phase === "inspect") {
         const el = now - st.inspStart;
-        if (el >= 17000) { finish(0, DNF); return; }
-        sync({ display: el >= 15000 ? "+2" : String(15 - Math.floor(el / 1000)), warn: el >= 12000 ? 12 : el >= 8000 ? 8 : 0 });
+        if (el >= 17000) {
+          finish(0, DNF);
+          return;
+        }
+        sync({
+          display: el >= 15000 ? "+2" : String(15 - Math.floor(el / 1000)),
+          warn: el >= 12000 ? 12 : el >= 8000 ? 8 : 0,
+        });
       }
       st.raf = requestAnimationFrame(tick);
     };
-    const loop = () => { cancelAnimationFrame(st.raf); st.raf = requestAnimationFrame(tick); };
+    const loop = () => {
+      cancelAnimationFrame(st.raf);
+      st.raf = requestAnimationFrame(tick);
+    };
 
     const finish = (t: number, pen: Penalty) => {
       cancelAnimationFrame(st.raf);
-      st.phase = "idle"; st.holding = st.ready = false;
+      st.phase = "idle";
+      st.holding = st.ready = false;
       sync({ display: null, warn: 0 });
       opts.current.onFinish(Math.round(t), pen);
     };
 
     const startInspection = () => {
-      st.phase = "inspect"; st.inspStart = performance.now();
-      sync({ display: "15", warn: 0 }); loop();
+      st.phase = "inspect";
+      st.inspStart = performance.now();
+      sync({ display: "15", warn: 0 });
+      loop();
     };
 
     const startSolve = () => {
-      st.inspPen = st.phase === "inspect" && performance.now() - st.inspStart > 15000 ? 2 : 0;
-      st.phase = "running"; st.t0 = performance.now();
-      sync({ display: "0.00", warn: 0 }); loop();
+      st.inspPen =
+        st.phase === "inspect" && performance.now() - st.inspStart > 15000
+          ? 2
+          : 0;
+      st.phase = "running";
+      st.t0 = performance.now();
+      sync({ display: "0.00", warn: 0 });
+      loop();
     };
 
     const cancelAttempt = () => {
-      cancelAnimationFrame(st.raf); clearTimeout(st.holdTimer);
-      st.phase = "idle"; st.holding = st.ready = st.pendingInspect = false;
+      cancelAnimationFrame(st.raf);
+      clearTimeout(st.holdTimer);
+      st.phase = "idle";
+      st.holding = st.ready = st.pendingInspect = false;
       sync({ display: null, warn: 0 });
     };
 
     const pressDown = () => {
-      if (st.phase === "running") { st.swallowUp = true; finish(performance.now() - st.t0, st.inspPen); return; }
-      if (st.phase === "idle" && opts.current.inspection) { st.pendingInspect = true; return; }
-      st.holding = true; st.ready = false;
+      if (st.phase === "running") {
+        st.swallowUp = true;
+        finish(performance.now() - st.t0, st.inspPen);
+        return;
+      }
+      if (st.phase === "idle" && opts.current.inspection) {
+        st.pendingInspect = true;
+        return;
+      }
+      st.holding = true;
+      st.ready = false;
       clearTimeout(st.holdTimer);
-      st.holdTimer = window.setTimeout(() => { st.ready = true; sync(); }, HOLD_MS);
+      st.holdTimer = window.setTimeout(() => {
+        st.ready = true;
+        sync();
+      }, HOLD_MS);
       sync(st.phase === "idle" ? { display: "0.00" } : {});
     };
 
     const pressUp = () => {
-      if (st.swallowUp) { st.swallowUp = false; return; }
-      if (st.pendingInspect) { st.pendingInspect = false; startInspection(); return; }
+      if (st.swallowUp) {
+        st.swallowUp = false;
+        return;
+      }
+      if (st.pendingInspect) {
+        st.pendingInspect = false;
+        startInspection();
+        return;
+      }
       if (!st.holding) return;
       clearTimeout(st.holdTimer);
       st.holding = false;
-      if (st.ready) { st.ready = false; startSolve(); }
-      else sync(st.phase === "idle" ? { display: null } : {});
+      if (st.ready) {
+        st.ready = false;
+        startSolve();
+      } else sync(st.phase === "idle" ? { display: null } : {});
     };
 
     // Let text fields (session names) take keys normally.
-    const typing = (e: KeyboardEvent) => st.phase === "idle" && (e.target as Element).matches?.("input[type=text], textarea");
+    const typing = (e: KeyboardEvent) =>
+      st.phase === "idle" &&
+      (e.target as Element).matches?.("input[type=text], textarea");
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (!opts.current.enabled || typing(e)) return;
-      if (e.key === "Escape" && st.phase !== "idle") { cancelAttempt(); return; }
+      if (e.key === "Escape" && st.phase !== "idle") {
+        cancelAttempt();
+        return;
+      }
       if (st.phase === "running") {
         if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
-        e.preventDefault(); if (!e.repeat) pressDown(); return;
+        e.preventDefault();
+        if (!e.repeat) pressDown();
+        return;
       }
-      if (e.code === "Space") { e.preventDefault(); if (!e.repeat) pressDown(); }
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (!e.repeat) pressDown();
+      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (!opts.current.enabled || typing(e)) return;
@@ -113,14 +198,24 @@ export function useTimer({ stageRef, inspection, onFinish, enabled = true }: Opt
     const onStageDown = (e: PointerEvent) => {
       if ((e.target as Element).closest("button") || e.button !== 0) return;
       e.preventDefault();
-      st.pointerArmed = true; st.downX = e.clientX; st.downY = e.clientY;
+      st.pointerArmed = true;
+      st.downX = e.clientX;
+      st.downY = e.clientY;
       pressDown();
     };
     const onDocDown = (e: PointerEvent) => {
       if (!opts.current.enabled) return;
-      if (st.phase === "running" && !stage.contains(e.target as Node)) { st.pointerArmed = true; pressDown(); }
+      if (st.phase === "running" && !stage.contains(e.target as Node)) {
+        st.pointerArmed = true;
+        pressDown();
+      }
     };
-    const onUp = () => { if (st.pointerArmed) { st.pointerArmed = false; pressUp(); } };
+    const onUp = () => {
+      if (st.pointerArmed) {
+        st.pointerArmed = false;
+        pressUp();
+      }
+    };
 
     // Drop a hold without starting the timer.
     const cancelHold = () => {
@@ -136,14 +231,18 @@ export function useTimer({ stageRef, inspection, onFinish, enabled = true }: Opt
     const abandonPointer = () => {
       if (!st.pointerArmed) return;
       st.pointerArmed = false;
-      if (st.swallowUp) st.swallowUp = false; // the touch that stopped a solve; nothing to cancel
+      if (st.swallowUp)
+        st.swallowUp = false; // the touch that stopped a solve; nothing to cancel
       else cancelHold();
     };
     const onMove = (e: PointerEvent) => {
       if (!st.pointerArmed || st.swallowUp) return;
-      if (Math.hypot(e.clientX - st.downX, e.clientY - st.downY) > SLOP_PX) abandonPointer();
+      if (Math.hypot(e.clientX - st.downX, e.clientY - st.downY) > SLOP_PX)
+        abandonPointer();
     };
-    const onScroll = () => { if (!st.swallowUp) abandonPointer(); };
+    const onScroll = () => {
+      if (!st.swallowUp) abandonPointer();
+    };
 
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
@@ -153,10 +252,14 @@ export function useTimer({ stageRef, inspection, onFinish, enabled = true }: Opt
     window.addEventListener("pointercancel", abandonPointer);
     window.addEventListener("pointermove", onMove, { passive: true });
     // Capture: also hears scrolling inside the phone page container (scroll doesn't bubble).
-    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    window.addEventListener("scroll", onScroll, {
+      passive: true,
+      capture: true,
+    });
     window.addEventListener("blur", cancelHold);
     return () => {
-      cancelAnimationFrame(st.raf); clearTimeout(st.holdTimer);
+      cancelAnimationFrame(st.raf);
+      clearTimeout(st.holdTimer);
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("keyup", onKeyUp);
       stage.removeEventListener("pointerdown", onStageDown);
@@ -169,7 +272,7 @@ export function useTimer({ stageRef, inspection, onFinish, enabled = true }: Opt
     };
   }, [stageRef]);
 
-  useWakeLock(view.phase !== "idle");
+  useWakeLock(true);
   return view;
 }
 
@@ -177,8 +280,18 @@ export function useTimer({ stageRef, inspection, onFinish, enabled = true }: Opt
 function useWakeLock(active: boolean) {
   useEffect(() => {
     if (!active || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null, released = false;
-    navigator.wakeLock.request("screen").then(l => { if (released) l.release(); else lock = l; }).catch(() => {});
-    return () => { released = true; lock?.release().catch(() => {}); };
+    let lock: WakeLockSentinel | null = null,
+      released = false;
+    navigator.wakeLock
+      .request("screen")
+      .then((l) => {
+        if (released) l.release();
+        else lock = l;
+      })
+      .catch(() => {});
+    return () => {
+      released = true;
+      lock?.release().catch(() => {});
+    };
   }, [active]);
 }
