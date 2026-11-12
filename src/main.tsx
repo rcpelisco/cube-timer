@@ -18,6 +18,9 @@ if (typeof (document as Partial<Document>).startViewTransition !== "function") {
   document.documentElement.classList.add("no-vt");
 }
 
+// iOS Safari only applies :active (the press feedback on buttons) once the page listens for touches.
+document.addEventListener("touchstart", () => {}, { passive: true });
+
 // Cache the app for offline use and pick up new versions on next launch.
 registerSW({ immediate: true });
 

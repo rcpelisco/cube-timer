@@ -255,6 +255,7 @@ export default function App() {
     "stage",
     timer.holding && !timer.ready && "holding",
     timer.ready && "ready",
+    timer.phase === "running" && "running",
     timer.phase === "inspect" && !timer.holding && "inspect",
     timer.warn === 8 && "warn8",
     timer.warn === 12 && "warn12",
