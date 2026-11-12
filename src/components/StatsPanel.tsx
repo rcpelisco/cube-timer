@@ -2,6 +2,7 @@ import { memo, useMemo, useState, type FormEvent } from "react";
 import { averageWindow, avgOf, bestRolling, bestSingle, DNF, eff, fmt, meanOf, rolling, shortTime, type Solve, type Stat } from "../lib/stats";
 import { CubeGlyph } from "./SessionPicker";
 import { AverageDetail } from "./AverageDetail";
+import { PbHistory } from "./PbHistory";
 import { SplitBars } from "./SplitsLine";
 import { splitMeans } from "../lib/splits";
 import type { PuzzleId } from "../lib/puzzles";
@@ -19,6 +20,7 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
 }) {
   const splits = useMemo(() => splitMeans(solves), [solves]);
   const [open, setOpen] = useState<Open | null>(null);
+  const [pbsOpen, setPbsOpen] = useState(false);
   const { okCount, mean, values } = useMemo(() => {
     let okCount = 0, sum = 0;
     for (const s of solves) if (s.pen !== DNF) { okCount++; sum += eff(s); }
@@ -64,6 +66,7 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
         <span>Solves <b>{okCount === solves.length ? solves.length : `${okCount}/${solves.length}`}</b></span>
         <span>Mean <b>{fmt(mean)}</b></span>
       </div>
+      {okCount > 0 && <button type="button" className="pb-link" onClick={() => setPbsOpen(true)}>PB history ›</button>}
       {splits && (
         <div className="stats-splits">
           <h3>Phases · mean of last {splits.count}</h3>
@@ -71,6 +74,7 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
         </div>
       )}
       {onGoal && <Goal solves={solves} goal={goal} onGoal={onGoal} />}
+      {pbsOpen && <PbHistory solves={solves} onClose={() => setPbsOpen(false)} />}
       {open && win && openRow && (
         <AverageDetail label={openRow[0]} which={open.which} win={win} origin={open.el} onClose={() => setOpen(null)} />
       )}

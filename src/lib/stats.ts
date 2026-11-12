@@ -135,3 +135,30 @@ export function newBests(prev: Solve[], solve: Solve): PbKind[] {
   }
   return out;
 }
+
+// Every time a personal best was set in the session, oldest first: the best single, Ao5, Ao12
+// and Ao100 at each solve where it got faster, in hundredths as shown (so 9.003 doesn't "beat"
+// 9.004). at: when, i: the solve that set it (for an average, the last solve in it), prev: the
+// best it beat (null for the first one).
+export type PbHistoryKind = "Single" | "Ao5" | "Ao12" | "Ao100";
+export const PB_HISTORY_KINDS: PbHistoryKind[] = ["Single", "Ao5", "Ao12", "Ao100"];
+export interface PbEvent { value: number; prev: number | null; i: number; at: number }
+
+export function pbHistory(solves: Solve[]): Record<PbHistoryKind, PbEvent[]> {
+  const track = (vals: (number | null)[]) => {
+    const out: PbEvent[] = [];
+    let best: number | null = null;
+    vals.forEach((v, i) => {
+      if (v == null || !isFinite(v) || (best != null && Math.floor(v / 10) >= Math.floor(best / 10))) return;
+      out.push({ value: v, prev: best, i, at: solves[i].at });
+      best = v;
+    });
+    return out;
+  };
+  return {
+    Single: track(solves.map(eff)),
+    Ao5: track(rolling(solves, avgOf, 5)),
+    Ao12: track(rolling(solves, avgOf, 12)),
+    Ao100: track(rolling(solves, avgOf, 100)),
+  };
+}
