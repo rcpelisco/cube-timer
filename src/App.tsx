@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
+import { bestRolling, DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
+import { FORMATS, limitPenalty, roundStatus, useMockComp } from "./lib/mockComp";
 import { fireConfetti } from "./lib/confetti";
 import { load, save } from "./lib/storage";
 import { firebaseEnabled } from "./lib/firebase";
@@ -33,6 +34,7 @@ import { TodayRing } from "./components/TodayRing";
 import { TrainerPage } from "./components/TrainerPage";
 import { TimeDisplay } from "./components/TimeDisplay";
 import { InspectRing } from "./components/InspectRing";
+import { MockCompBar, MockCompResult, MockCompSetup } from "./components/MockComp";
 import { SettingsPage } from "./components/SettingsPage";
 import { SolveActions } from "./components/SolveActions";
 import "./App.css";
@@ -53,6 +55,16 @@ export default function App() {
   scrambleRef.current = scramble;
   const stageRef = useRef<HTMLDivElement>(null);
 
+  // Mock competition round (lib/mockComp.ts). It belongs to one session; while it's going,
+  // inspection is on and each solve is one of its attempts.
+  const comp = useMockComp();
+  const [compSetup, setCompSetup] = useState(false);
+  const compRound = comp.round && comp.round.sid === current.id ? comp.round : null;
+  const compStatus = useMemo(() => (compRound ? roundStatus(compRound, solves) : null), [compRound, solves]);
+  const compLive = !!compRound && !!compStatus && !compStatus.done;
+  const compRef = useRef({ live: compLive, limit: compRound?.limit ?? null });
+  compRef.current = { live: compLive, limit: compRound?.limit ?? null };
+
   useEffect(() => save({ sessions: sessions.sessions, currentId: current.id, inspection }), [sessions.sessions, current.id, inspection]);
 
   const algPrefs = useAlgPrefs();
@@ -68,21 +80,25 @@ export default function App() {
   // The solve that last set a personal best (its badge shows while it's the latest solve).
   const [pbAt, setPbAt] = useState<number | null>(null);
 
+  const recordAttempt = comp.record;
   const onFinish = useCallback((t: number, pen: Penalty, marks: number[]) => {
     const scr = scrambleRef.current?.moves ?? "";
-    const solve: Solve = { t, pen, scr, at: Date.now() };
+    const round = compRef.current;
+    const solve: Solve = { t, pen: round.live ? limitPenalty(t, pen, round.limit) : pen, scr, at: Date.now() };
     if (marks.length) solve.sp = marks;
     if (newBests(solvesRef.current, solve).length) { setPbAt(solve.at); fireConfetti(); }
     setSolves(list => [...list, solve]);
+    if (round.live) recordAttempt(solve.at);
     nextScramble();
-  }, [setSolves, nextScramble]);
+  }, [setSolves, nextScramble, recordAttempt]);
 
   const [view, setView] = useView();
   // Computers show solves and stats beside the timer, so "solves" is the timer page there.
   const showTimer = view === "timer" || (!isPhone && view === "solves");
   // The timer only listens for keys and taps while its page is showing.
   const [phases] = usePhaseCount();
-  const timer = useTimer({ stageRef, inspection, onFinish, enabled: showTimer, phases });
+  const timerInspection = inspection || compLive;
+  const timer = useTimer({ stageRef, inspection: timerInspection, onFinish, enabled: showTimer, phases });
   const active = timer.phase !== "idle";
   const phaseRef = useRef(timer.phase);
   useEffect(() => { phaseRef.current = timer.phase; }, [timer.phase]);
@@ -90,17 +106,17 @@ export default function App() {
   // "Eight seconds", "Twelve seconds" during inspection. Speech is unlocked on the first tap or key.
   const [calls] = useBoolPref(inspectionCallsPref);
   useEffect(() => {
-    if (calls && inspection && timer.phase === "inspect" && timer.warn) callOut(timer.warn);
+    if (calls && timerInspection && timer.phase === "inspect" && timer.warn) callOut(timer.warn);
     // Only when the warning steps up, not on every frame of the countdown.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer.warn]);
   useEffect(() => {
-    if (!calls || !inspection) return;
+    if (!calls || !timerInspection) return;
     const opts = { capture: true, passive: true };
     window.addEventListener("pointerdown", unlockSpeech, opts);
     window.addEventListener("keydown", unlockSpeech, opts);
     return () => { window.removeEventListener("pointerdown", unlockSpeech, opts); window.removeEventListener("keydown", unlockSpeech, opts); };
-  }, [calls, inspection]);
+  }, [calls, timerInspection]);
   useFocusMode(active);
   const hasBg = useTimerBgLayer(showTimer || view === "train");
 
@@ -183,8 +199,24 @@ export default function App() {
   const act = isTouch ? "Touch and hold" : <>Hold <kbd>Space</kbd></>;
   const hint =
     timer.phase === "running" ? (isTouch ? "Tap to stop" : "Any key to stop")
-    : timer.phase === "inspect" || !inspection ? <>{act} until green, release to start</>
+    : timer.phase === "inspect" || !timerInspection ? <>{act} until green, release to start</>
     : isTouch ? "Tap to start inspection" : <>Press <kbd>Space</kbd> to start inspection</>;
+
+  // A finished round goes into the history (and is updated if a penalty changes its result).
+  const keepRound = comp.keep;
+  const puzzleLabel = PUZZLES[puzzle].label;
+  useEffect(() => {
+    if (compRound && compStatus?.done) keepRound(compRound, compStatus, puzzleLabel);
+  }, [compRound, compStatus, keepRound, puzzleLabel]);
+  const compBest = useMemo(() => {
+    if (!compRound || !compStatus?.done) return null;
+    const f = FORMATS[compRound.format];
+    return bestRolling(solves.filter(s => s.at < compRound.startAt), f.fn, f.n);
+  }, [compRound, compStatus?.done, solves]);
+  const startRound = (format: Parameters<typeof comp.start>[1], cutoff: number | null, limit: number | null) => {
+    comp.start(current.id, format, cutoff, limit);
+    nextScramble();
+  };
 
   const stageClass = [
     "stage",
@@ -225,6 +257,17 @@ export default function App() {
 
       {/* The timer page stays mounted (hidden) on other pages so its state and scramble keep. */}
       <section className="main" hidden={!showTimer}>
+        {compRound && compStatus && (compStatus.done
+          ? <MockCompResult round={compRound} status={compStatus} sessionBest={compBest}
+              onAgain={() => startRound(compRound.format, compRound.cutoff, compRound.limit)} onDone={comp.end} />
+          : <MockCompBar round={compRound} status={compStatus} onEnd={comp.end} />)}
+        {comp.round && !compRound && (
+          <div className="panel comp-bar comp-elsewhere dimmable">
+            <span>A mock round is going in another session.</span>
+            <button type="button" className="link-btn" onClick={comp.end}>End it</button>
+          </div>
+        )}
+        {compSetup && <MockCompSetup puzzle={puzzleLabel} history={comp.history} onStart={startRound} onClose={() => setCompSetup(false)} />}
         <div className="scramble dimmable">
           <div className="scramble-text">
             <span className="label">
@@ -238,9 +281,15 @@ export default function App() {
                 ? <span className="moves pending" role="alert">Couldn't generate a scramble. Try again.</span>
                 : <span className="moves pending" aria-live="polite">Generating scramble…</span>}
           </div>
-          <button type="button" onClick={nextScramble} disabled={!scramble && !scrambleFailed}>
-            {scrambleFailed ? "Try again" : "New scramble"}
-          </button>
+          <div className="scramble-actions">
+            {/* No new scrambles mid-round, as at a competition (unless one couldn't be made). */}
+            {(!compLive || scrambleFailed) && (
+              <button type="button" onClick={nextScramble} disabled={!scramble && !scrambleFailed}>
+                {scrambleFailed ? "Try again" : "New scramble"}
+              </button>
+            )}
+            {!comp.round && <button type="button" className="comp-open" onClick={() => setCompSetup(true)}>Mock comp</button>}
+          </div>
         </div>
 
         <div className={stageClass} ref={stageRef}>

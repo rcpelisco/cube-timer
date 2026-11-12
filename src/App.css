@@ -1007,3 +1007,41 @@ body.solving .today-ring { display: none; }
 @keyframes insp-drain { to { stroke-dashoffset: var(--insp-c); } }
 @keyframes insp-over { to { stroke: var(--hold); } }
 @media (prefers-reduced-motion: reduce) { .stage .insp-track { animation: none; } }
+
+/* ---------- Mock competition (components/MockComp.tsx) ---------- */
+.scramble-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.comp-title { font: 600 22px var(--font-ui); margin: 4px 0 2px; }
+.comp-form { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.comp-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.comp-field > span { display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0; }
+.comp-field small { color: var(--muted); font-size: 12.5px; }
+.comp-field .segmented { grid-template-columns: repeat(2, 1fr); min-width: 160px; }
+.comp-field input { width: 6.5em; font: 500 16px var(--font-num); padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.comp-problem { margin: 0; color: var(--hold); font-size: 13px; }
+.comp-start { align-self: stretch; justify-content: center; padding: 11px; font-size: 15px; font-weight: 600; background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.comp-note { color: var(--muted); font-size: 12px; text-align: center; }
+.comp-past-head { margin: 0 0 8px; }
+.comp-past li { grid-template-columns: 4.5em minmax(0, 1fr) auto; grid-template-areas: "time times date"; }
+.comp-past-times { grid-area: times; font: 400 12.5px var(--font-num); color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.comp-bar, .comp-result { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.comp-bar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.comp-bar-head b { font-size: 14px; }
+.comp-rules { color: var(--muted); font-size: 12px; margin-top: -4px; }
+.comp-end-confirm { font-size: 13px; display: inline-flex; gap: 10px; align-items: baseline; }
+.comp-elsewhere { flex-direction: row; align-items: center; justify-content: space-between; font-size: 13.5px; }
+.comp-attempts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; }
+.comp-attempts li { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 4px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); }
+.comp-attempts i { font: 600 10px var(--font-ui); font-style: normal; color: var(--muted); letter-spacing: 0.08em; }
+.comp-attempts span { font: 500 15px var(--font-num); font-variant-numeric: tabular-nums; }
+.comp-attempts li.empty span { color: var(--muted); }
+.comp-attempts li.dnf span { color: var(--hold); }
+.comp-result .overlay-close { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; }
+.comp-result-main { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+.comp-result-main > div { display: flex; flex-direction: column; }
+.comp-result-main small { color: var(--muted); font-size: 12px; }
+.comp-result-main b { font: 500 20px var(--font-num); }
+.comp-result-main b.comp-result-value { font-size: 38px; line-height: 1.1; color: var(--accent); }
+.comp-compare { color: var(--muted); font-size: 12.5px; }
+.comp-compare:empty { display: none; }
+.comp-result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
