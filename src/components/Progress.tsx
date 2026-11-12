@@ -107,7 +107,7 @@ function Chart({ points, period, goal }: { points: Point[]; period: Period; goal
       {[hi - pad, (hi + lo) / 2, lo + pad].map(v => (
         <g key={v}>
           <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--line)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-          <text x={L - 6} y={Y(v) + 4} textAnchor="end" fontSize={11} fill="var(--muted)" fontFamily="Chivo Mono, monospace">{fmt(v)}</text>
+          <text x={L - 6} y={Y(v) + 4} textAnchor="end" fontSize={11} fill="var(--muted)" fontFamily="Chivo Mono Variable, monospace">{fmt(v)}</text>
         </g>
       ))}
       {goalY != null && (
@@ -124,8 +124,8 @@ function Chart({ points, period, goal }: { points: Point[]; period: Period; goal
           {dots && <circle cx={X(p.k)} cy={Y(p.avg)} r={2.5} fill="var(--accent)" pointerEvents="none" />}
         </g>
       ))}
-      <text x={L} y={H - 4} fontSize={10} fill="var(--muted)" fontFamily="Chivo Mono, monospace">{axisText(k0, period)}</text>
-      <text x={W - R} y={H - 4} fontSize={10} textAnchor="end" fill="var(--muted)" fontFamily="Chivo Mono, monospace">{axisText(k1, period)}</text>
+      <text x={L} y={H - 4} fontSize={10} fill="var(--muted)" fontFamily="Chivo Mono Variable, monospace">{axisText(k0, period)}</text>
+      <text x={W - R} y={H - 4} fontSize={10} textAnchor="end" fill="var(--muted)" fontFamily="Chivo Mono Variable, monospace">{axisText(k1, period)}</text>
     </svg>
   );
 }

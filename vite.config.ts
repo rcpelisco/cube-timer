@@ -51,6 +51,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
+        // Only the latin font files go in the offline copy; the other subsets load if a character ever needs them.
+        globIgnores: ["**/*-{latin-ext,vietnamese,cyrillic,cyrillic-ext,greek,greek-ext}-wght-normal-*.woff2"],
         // Firebase Hosting serves the Google sign-in handler under /__/; let those requests reach the network.
         navigateFallbackDenylist: [/^\/__\//],
       },

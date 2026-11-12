@@ -78,7 +78,7 @@ function Chart({ pts, aoPts, start, end }: { pts: [number, number][]; aoPts: [nu
       {[hi, (hi + lo) / 2, lo].map(v => (
         <g key={v}>
           <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--line)" strokeWidth={1} />
-          <text x={L - 6} y={Y(v) + 4} textAnchor="end" fontSize={11} fill="var(--muted)" fontFamily="Chivo Mono, monospace">{fmt(v)}</text>
+          <text x={L - 6} y={Y(v) + 4} textAnchor="end" fontSize={11} fill="var(--muted)" fontFamily="Chivo Mono Variable, monospace">{fmt(v)}</text>
         </g>
       ))}
       {/* Drawn in from the left when the chart first shows (not on every solve). */}

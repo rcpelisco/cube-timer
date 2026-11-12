@@ -19,7 +19,7 @@ const W = 1080, H = 1350, PAD = 96;
 const C = {
   bg1: "#0d1116", bg2: "#18202b", ink: "#e6ebf2", muted: "#8b97a8", line: "#273140", chip: "#1b232e",
 };
-const UI = '"Archivo", system-ui, sans-serif', NUM = '"Chivo Mono", ui-monospace, monospace';
+const UI = '"Archivo Variable", system-ui, sans-serif', NUM = '"Chivo Mono Variable", ui-monospace, monospace';
 
 // Lines of text that fit `width`, breaking at spaces (or anywhere in a word too long for a line).
 function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, max: number): string[] {

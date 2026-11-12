@@ -78,9 +78,9 @@ function Bars({ counts, w, start, goal, cutLow, cutHigh }: {
       })}
       <line x1={L} x2={W - R} y1={H - B} y2={H - B} stroke="var(--line)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
       {counts.map((_, i) => i % step === 0 && (
-        <text key={i} x={L + i * bw + 1} y={H - 4} fontSize={10} fill="var(--muted)" fontFamily="Chivo Mono, monospace">{label(i)}</text>
+        <text key={i} x={L + i * bw + 1} y={H - 4} fontSize={10} fill="var(--muted)" fontFamily="Chivo Mono Variable, monospace">{label(i)}</text>
       ))}
-      {cutHigh && <text x={W - R} y={H - 4} fontSize={10} textAnchor="end" fill="var(--muted)" fontFamily="Chivo Mono, monospace">+</text>}
+      {cutHigh && <text x={W - R} y={H - 4} fontSize={10} textAnchor="end" fill="var(--muted)" fontFamily="Chivo Mono Variable, monospace">+</text>}
       {goalX != null && (
         <line x1={goalX} x2={goalX} y1={T - 4} y2={H - B} stroke="var(--ink)" strokeWidth={1.5} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
       )}

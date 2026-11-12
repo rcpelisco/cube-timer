@@ -16,8 +16,8 @@
   --sticker-off: #c5ccd6;
   --sticker-edge: rgb(19 26 35 / 0.28);
   --cube-body: #14181e;
-  --font-ui: "Archivo", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-num: "Chivo Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --font-ui: "Archivo Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-num: "Chivo Mono Variable", ui-monospace, "SF Mono", Consolas, monospace;
   color-scheme: light;
 }
 /* Dark palette: follows the device unless the theme button forced light (data-theme="light"),

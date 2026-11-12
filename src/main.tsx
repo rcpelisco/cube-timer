@@ -1,12 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
-import "@fontsource/archivo/latin-400.css";
-import "@fontsource/archivo/latin-500.css";
-import "@fontsource/archivo/latin-600.css";
-import "@fontsource/archivo/latin-700.css";
-import "@fontsource/chivo-mono/latin-400.css";
-import "@fontsource/chivo-mono/latin-500.css";
+import "@fontsource-variable/archivo/wght.css";
+import "@fontsource-variable/chivo-mono/wght.css";
 import App from "./App.tsx";
 import { applyTheme, themeStore } from "./lib/theme";
 
