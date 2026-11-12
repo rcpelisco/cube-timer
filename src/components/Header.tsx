@@ -3,7 +3,23 @@ import { SessionPicker, type SessionPickerProps } from "./SessionPicker";
 import { ThemeButton } from "./ThemeButton";
 import type { View } from "../hooks/useView";
 
-const LOGO = ["#0a9a4a", "#f4f4f4", "#c8102e", "#ffd500", "#0051ba", "#ff5800", "#c8102e", "#0a9a4a", "#ffd500"];
+// The app icon (public/icon.svg) without its background, in the theme's colours: the 3×3 mark
+// inside a stopwatch ring.
+function BrandMark() {
+  return (
+    <svg className="brand-mark" viewBox="88 74 336 366" aria-hidden="true">
+      <rect x="226" y="78" width="60" height="30" rx="10" fill="var(--accent)" />
+      <rect x="246" y="100" width="20" height="12" fill="var(--accent)" />
+      <circle cx="256" cy="272" r="150" fill="none" stroke="var(--line)" strokeWidth="28" />
+      <circle cx="256" cy="272" r="150" fill="none" stroke="var(--accent)" strokeWidth="28" strokeLinecap="round"
+        strokeDasharray="678.6 942.5" transform="rotate(-90 256 272)" />
+      {Array.from({ length: 9 }, (_, i) => (
+        <rect key={i} x={181 + (i % 3) * 52} y={197 + Math.floor(i / 3) * 52} width="46" height="46" rx="10"
+          fill={i % 2 ? "var(--accent)" : "var(--ink)"} />
+      ))}
+    </svg>
+  );
+}
 const TITLE: Partial<Record<View, string>> = { algs: "Algorithms", train: "Trainer", settings: "Settings" };
 
 interface Props {
@@ -30,9 +46,7 @@ export function Header({ phone, account, sessions, view, onView }: Props) {
     <header className="bar dimmable">
       <div className="brand-row">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            {LOGO.map((c, i) => <i key={i} style={{ background: c }} />)}
-          </span>
+          <BrandMark />
           Cube Timer
         </div>
         <nav className="view-tabs" aria-label="Pages">

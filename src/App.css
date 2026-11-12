@@ -51,8 +51,7 @@ body {
 
 header.bar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
-.brand-mark { display: grid; grid-template-columns: repeat(3, 7px); gap: 2px; }
-.brand-mark i { width: 7px; height: 7px; border-radius: 1.5px; }
+.brand-mark { width: 23px; height: 25px; flex: none; }
 .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 button {
