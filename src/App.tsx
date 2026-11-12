@@ -31,6 +31,7 @@ import { PenaltyButtons, SolveList } from "./components/SolveList";
 import { SolveDetail } from "./components/SolveDetail";
 import { TabBar } from "./components/TabBar";
 import { ScrollTop } from "./components/ScrollTop";
+import { EmptySolves } from "./components/EmptySolves";
 import { QuickStats } from "./components/QuickStats";
 import { TodayRing } from "./components/TodayRing";
 import { SplitsBadge } from "./components/SplitsBadge";
@@ -381,16 +382,17 @@ export default function App() {
       {isPhone ? (
         view === "solves" && (
           <section className="solves-page">
-            <div className="solves-actions"><SolveActions solves={solves} onClear={() => setSolves(() => [])} /></div>
-            {statsPanel}
-            <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} />
-            {solveList}
+            {solves.length ? <>
+              <div className="solves-actions"><SolveActions solves={solves} onClear={() => setSolves(() => [])} /></div>
+              {statsPanel}
+              <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} />
+              {solveList}
+            </> : <EmptySolves puzzle={puzzle} session={current.name} touch={isTouch} onTimer={() => setView("timer")} />}
           </section>
         )
       ) : (
         <aside className="side dimmable" hidden={!showTimer}>
-          {statsPanel}
-          {solveList}
+          {solves.length ? <>{statsPanel}{solveList}</> : <EmptySolves puzzle={puzzle} session={current.name} touch={isTouch} />}
         </aside>
       )}
     </div>
