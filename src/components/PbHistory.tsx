@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useChartWidth } from "../hooks/useChartWidth";
 import { createPortal } from "react-dom";
 import { fmt, PB_HISTORY_KINDS, pbHistory, type PbEvent, type PbHistoryKind, type Solve } from "../lib/stats";
 import { useLeave } from "../hooks/useLeave";
@@ -77,11 +78,12 @@ export function PbHistory({ solves, onClose }: { solves: Solve[]; onClose: () =>
   );
 }
 
-const W = 400, H = 130, L = 44, R = 10, T = 8, B = 16;
+const H = 130, L = 44, R = 10, T = 8, B = 16;
 
 // The best over the session as a staircase: flat until a new PB, then a step down. It runs a
 // little past the latest PB rather than to the latest solve, so PBs long ago don't get squashed.
 function StepChart({ events, total }: { events: PbEvent[]; total: number }) {
+  const [svgRef, W] = useChartWidth();
   const hi = events[0].value, lo = events[events.length - 1].value;
   const pad = Math.max(50, (hi - lo) * 0.08);
   const first = events[0].i, lastPb = events[events.length - 1].i;
@@ -93,7 +95,7 @@ function StepChart({ events, total }: { events: PbEvent[]; total: number }) {
   d += `H${X(last)}`;
   return (
     <div className="panel pb-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Personal best over the session">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Personal best over the session">
         {[hi, (hi + lo) / 2, lo].map(v => (
           <g key={v}>
             <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--line)" strokeWidth={1} vectorEffect="non-scaling-stroke" />

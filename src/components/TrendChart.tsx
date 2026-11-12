@@ -1,11 +1,12 @@
 import { memo, useId, useState } from "react";
+import { useChartWidth } from "../hooks/useChartWidth";
 import { avgOf, eff, fmt, type Solve } from "../lib/stats";
 import type { Session } from "../lib/sessions";
 import { Spread } from "./Spread";
 import { Days } from "./Days";
 import { Progress } from "./Progress";
 
-const W = 400, H = 120, L = 44, R = 8, T = 8, B = 10;
+const H = 120, L = 44, R = 8, T = 8, B = 10;
 
 type Tab = "trend" | "progress" | "spread" | "days";
 const TABS: { id: Tab; label: string }[] = [{ id: "trend", label: "Trend" }, { id: "progress", label: "Progress" }, { id: "spread", label: "Spread" }, { id: "days", label: "Days" }];
@@ -51,6 +52,7 @@ function Trend({ solves }: { solves: Solve[] }) {
 }
 
 function Chart({ pts, aoPts, start, end }: { pts: [number, number][]; aoPts: [number, number][]; start: number; end: number }) {
+  const [svgRef, W] = useChartWidth();
   const all = pts.concat(aoPts).map(p => p[1]);
   let lo = Math.min(...all), hi = Math.max(...all);
   if (hi - lo < 200) { const m = (hi + lo) / 2; lo = m - 100; hi = m + 100; }
@@ -66,7 +68,7 @@ function Chart({ pts, aoPts, start, end }: { pts: [number, number][]; aoPts: [nu
     : null;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Solve times trend">
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Solve times trend">
       <defs>
         <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="var(--accent)" stopOpacity={0.24} />

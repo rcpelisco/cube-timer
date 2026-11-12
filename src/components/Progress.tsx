@@ -1,7 +1,8 @@
 import { useMemo } from "react";
+import { useChartWidth } from "../hooks/useChartWidth";
 import { DNF, eff, fmt, type Solve } from "../lib/stats";
 
-const W = 400, H = 120, L = 44, R = 8, T = 8, B = 18;
+const H = 120, L = 44, R = 8, T = 8, B = 18;
 const DAY_MS = 86_400_000;
 
 type Period = "day" | "week" | "month";
@@ -88,6 +89,7 @@ export function Progress({ solves, goal }: { solves: Solve[]; goal?: number }) {
 }
 
 function Chart({ points, period, goal }: { points: Point[]; period: Period; goal?: number }) {
+  const [svgRef, W] = useChartWidth();
   const k0 = points[0].k, k1 = points[points.length - 1].k;
   let lo = Math.min(...points.map(p => p.best)), hi = Math.max(...points.map(p => p.avg));
   if (hi - lo < 200) { const m = (hi + lo) / 2; lo = m - 100; hi = m + 100; }
@@ -100,7 +102,7 @@ function Chart({ points, period, goal }: { points: Point[]; period: Period; goal
   const dots = points.length <= 40;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img"
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img"
       aria-label={`Average and best single by ${period}: ${points.map(p => `${periodText(p.k, period)}: average ${fmt(p.avg)}, best ${fmt(p.best)}`).join("; ")}`}>
       {[hi - pad, (hi + lo) / 2, lo + pad].map(v => (
         <g key={v}>

@@ -1,7 +1,8 @@
 import { useMemo } from "react";
+import { useChartWidth } from "../hooks/useChartWidth";
 import { DNF, eff, fmt, shortTime, type Solve } from "../lib/stats";
 
-const W = 400, H = 120, L = 8, R = 8, T = 8, B = 18;
+const H = 120, L = 8, R = 8, T = 8, B = 18;
 // Bucket widths to choose from (ms): the smallest that gives at most MAX_BARS bars.
 const WIDTHS = [100, 250, 500, 1000, 2000, 5000, 10000, 15000, 30000, 60000, 120000];
 const MAX_BARS = 16;
@@ -51,6 +52,7 @@ export function Spread({ solves, goal }: { solves: Solve[]; goal?: number }) {
 function Bars({ counts, w, start, goal, cutLow, cutHigh }: {
   counts: number[]; w: number; start: number; goal?: number; cutLow: boolean; cutHigh: boolean;
 }) {
+  const [svgRef, W] = useChartWidth();
   const n = counts.length, max = Math.max(...counts);
   const bw = (W - L - R) / n;
   const X = (ms: number) => L + ((ms - start) / w) * bw;
@@ -62,7 +64,7 @@ function Bars({ counts, w, start, goal, cutLow, cutHigh }: {
   };
   const goalX = goal != null && goal > start && goal < start + n * w ? X(goal) : null;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img"
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img"
       aria-label={`Times by range: ${counts.map((c, i) => `${shortTime(start + i * w)} to ${shortTime(start + (i + 1) * w)}: ${c}`).join(", ")}`}>
       {counts.map((c, i) => {
         const h = max ? (c / max) * (H - T - B) : 0;
