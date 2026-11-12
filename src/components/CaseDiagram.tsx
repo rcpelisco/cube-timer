@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useSeen } from "../hooks/useSeen";
 import { puzzleOf, type AlgCase } from "../lib/algs";
 import { CROSS_COLORS, facesFor, type CrossColor } from "../lib/crossColor";
 import { llStickers, stickers2x2, type Face, type Face2, type Layer2, type LLStickers, type Stickers2 } from "../lib/llDiagram";
 
-// Last-layer diagrams. Stickers come from undoing the algorithm on a cube model, so the drawing
+// Last-layer diagrams. Each one only works out its stickers once it's near the screen, so a long
+// list of cases opens without doing them all at once. Stickers come from undoing the algorithm on a cube model, so the drawing
 // always matches the algorithm.
 // - 3×3 OLL/PLL: the top face as a 3×3 grid with the top layer's side stickers as strips around it.
 //   OLL shows only the top color (everything else gray); PLL shows the side colors too.
@@ -24,11 +26,13 @@ const Sticker = ({ x, y, w, h, fill }: { x: number; y: number; w: number; h: num
 
 function Diagram3x3({ c, alg, cross, className = "" }: { c: AlgCase; alg: string; cross: CrossColor; className?: string }) {
   const [st, setSt] = useState<LLStickers | null>(null);
+  const [ref, seen] = useSeen<SVGSVGElement>();
   useEffect(() => {
+    if (!seen) return;
     let alive = true;
     llStickers(alg).then(s => { if (alive) setSt(s); });
     return () => { alive = false; };
-  }, [alg]);
+  }, [alg, seen]);
 
   const CELL = 22;
   const pos = (i: number) => O + i * (CELL + GAP);
@@ -52,7 +56,7 @@ function Diagram3x3({ c, alg, cross, className = "" }: { c: AlgCase; alg: string
   }
 
   return (
-    <svg className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
+    <svg ref={ref} className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
       {rects.map((r, i) => <Sticker key={i} {...r} fill={fill(r.f)} />)}
     </svg>
   );
@@ -78,11 +82,13 @@ function layerRects(layer: Layer2 | undefined, x0: number) {
 
 function Diagram2x2({ c, alg, cross, className = "" }: { c: AlgCase; alg: string; cross: CrossColor; className?: string }) {
   const [st, setSt] = useState<Stickers2 | null>(null);
+  const [ref, seen] = useSeen<SVGSVGElement>();
   useEffect(() => {
+    if (!seen) return;
     let alive = true;
     stickers2x2(alg).then(s => { if (alive) setSt(s); });
     return () => { alive = false; };
-  }, [alg]);
+  }, [alg, seen]);
 
   // The first face (the "cross" color setting) is on the bottom.
   const faces = { ...facesFor(cross), D: CROSS_COLORS.find(x => x.id === cross)!.swatch };
@@ -94,7 +100,7 @@ function Diagram2x2({ c, alg, cross, className = "" }: { c: AlgCase; alg: string
 
   if (c.set === "OLL2") {
     return (
-      <svg className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
+      <svg ref={ref} className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
         {layerRects(st?.top, 0).map((r, i) => <Sticker key={i} {...r} fill={fill(r.f)} />)}
       </svg>
     );
@@ -115,7 +121,7 @@ function Diagram2x2({ c, alg, cross, className = "" }: { c: AlgCase; alg: string
     }
   }
   return (
-    <svg className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
+    <svg ref={ref} className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
       <polygon points={CUBE_OUTLINE} fill="var(--cube-body)" />
       {quads.map((q, i) => <polygon key={i} points={q.pts} fill={fill(q.f)} stroke="var(--sticker-edge)" strokeWidth={0.6} strokeLinejoin="round" />)}
     </svg>

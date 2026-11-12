@@ -418,6 +418,8 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before {
   display: flex; flex-direction: column; align-items: stretch; gap: 6px; text-align: left; padding: 10px;
   border-radius: 10px; background: var(--surface); min-width: 0;
 }
+/* Off-screen cards skip layout and painting until scrolled near (they keep their last size). */
+.algs-grid .case-card { content-visibility: auto; contain-intrinsic-size: auto 240px; }
 .case-diagram { display: block; width: 100%; aspect-ratio: 1; max-width: 130px; align-self: center; }
 .case-name { font-weight: 700; font-size: 14px; }
 .case-alg { font: 400 12.5px/1.4 var(--font-num); color: var(--muted); overflow-wrap: anywhere; }
