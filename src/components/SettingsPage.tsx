@@ -8,7 +8,8 @@ import { useShowTriggers } from "../hooks/useShowTriggers";
 import { SolveActions } from "./SolveActions";
 import type { Solve } from "../lib/stats";
 import { useWakeLockStatus } from "../lib/wakeLockStatus";
-import type { ImportResult } from "../lib/csTimer";
+import { exportCsTimer, type ImportResult } from "../lib/csTimer";
+import { exportFileName, saveTextFile } from "../lib/saveFile";
 import { ImportCsTimer } from "./ImportCsTimer";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
 
@@ -49,12 +50,13 @@ function WakeLockDiagnostics() {
   );
 }
 
-// Settings: timer options, sessions, Copy times / Clear solves, import, algorithms, appearance, and
-// your Google account / sync. Phones reach it from the tab bar (and also have Copy / Clear on the
-// Solves tab); computers from the account menu (or the cog when signed out).
+// Settings: timer options, algorithms, sessions (with Copy times / Clear solves on the current
+// one), import & export, appearance, and your Google account / sync. Phones reach it from the tab
+// bar (and also have Copy / Clear on the Solves tab); computers from the account menu (or the cog
+// when signed out).
 export function SettingsPage({ inspection, onInspection, account, sessions, solveActions, onImport }: {
   inspection: boolean; onInspection: (v: boolean) => void; account: AccountProps; sessions: SessionPickerProps;
-  solveActions?: { solves: Solve[]; onClear: () => void; session: string };
+  solveActions?: { solves: Solve[]; onClear: () => void };
   onImport: (text: string) => ImportResult;
 }) {
   const { enabled, user, sync, error, onSignIn, onSignOut } = account;
@@ -86,26 +88,6 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
         </label>
       </div>
 
-      <div className="panel settings-group session-settings">
-        <h2>Sessions</h2>
-        <SessionManager {...sessions} />
-      </div>
-
-      {solveActions && (
-        <div className="panel settings-group">
-          <h2>Solves</h2>
-          <div className="setting-row">
-            <span>
-              <b>{solveActions.session}</b>
-              <small>{solveActions.solves.length} {solveActions.solves.length === 1 ? "solve" : "solves"} in this session. Copy them with their scrambles, or clear the session.</small>
-            </span>
-          </div>
-          <div className="settings-actions"><SolveActions solves={solveActions.solves} onClear={solveActions.onClear} /></div>
-        </div>
-      )}
-
-      <ImportCsTimer onImport={onImport} />
-
       <div className="panel settings-group">
         <h2>Algorithms</h2>
         <label className="setting-row" htmlFor="opt-triggers">
@@ -117,6 +99,15 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
             onChange={e => setShowTriggers(e.target.checked)} />
         </label>
       </div>
+
+      <div className="panel settings-group session-settings">
+        <h2>Sessions</h2>
+        <SessionManager {...sessions}
+          currentActions={solveActions && <SolveActions solves={solveActions.solves} onClear={solveActions.onClear} />}
+          onExport={s => { saveTextFile(exportFileName(s.name), exportCsTimer([s])).catch(() => {}); }} />
+      </div>
+
+      <ImportCsTimer sessions={sessions.list} onImport={onImport} />
 
       <div className="panel settings-group">
         <h2>Appearance</h2>

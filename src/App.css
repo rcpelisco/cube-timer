@@ -192,7 +192,8 @@ button.google { display: inline-flex; align-items: center; gap: 7px; }
 .session-list li { display: flex; align-items: center; gap: 2px; border-radius: 7px; }
 .session-list li.current { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .session-row { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 0; background: none; padding: 8px; text-align: left; border-radius: 7px; }
-.session-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-name { font-weight: 600; max-width: 100%; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.session-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-list li.current .session-name { color: var(--accent); }
 .session-meta { font: 400 12px var(--font-num); color: var(--muted); }
 .icon-btn { border: 0; background: none; padding: 8px; display: grid; place-items: center; color: var(--muted); }
@@ -704,7 +705,6 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .settings { grid-column: 1 / -1; width: 100%; max-width: 640px; margin: 0 auto; }
 .settings-title { margin: 0; font-size: 24px; letter-spacing: -0.01em; }
 .app.phone .settings-title { display: none; }
-.settings-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .settings-btn { width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
 .settings-btn.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .account-menu button[role="menuitem"] { text-align: left; }
@@ -718,10 +718,33 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .import-result .muted { color: var(--muted); }
 .import-error { max-width: none; margin: 0; }
 
-/* Sessions section in Settings: same list as the header menu, without the menu's height cap. */
-.session-settings { gap: 6px; }
+/* Session list as cards with the new-session form folded behind a button: the Sessions section
+   in Settings and the session menu on the timer page. */
+.session-settings, .session-menu { gap: 10px; }
 .session-settings .session-list { max-height: none; }
-.session-settings .session-new { padding-top: 10px; }
+:is(.session-settings, .session-menu) .session-list { gap: 8px; }
+:is(.session-settings, .session-menu) .session-list li { border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding-right: 4px; }
+:is(.session-settings, .session-menu) .session-list li.current { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
+:is(.session-settings, .session-menu) .session-list li.current .session-name { color: var(--ink); }
+:is(.session-settings, .session-menu) .session-row { padding: 10px 12px; gap: 4px; }
+:is(.session-settings, .session-menu) .session-name { font-size: 15px; }
+:is(.session-settings, .session-menu) .session-meta { font: 400 12.5px var(--font-ui); }
+:is(.session-settings, .session-menu) .session-confirm, :is(.session-settings, .session-menu) .session-edit { padding: 10px 12px; }
+.session-add {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px;
+  border: 1px dashed var(--line); background: none; color: var(--muted); font-weight: 600; border-radius: 10px;
+}
+@media (hover: hover) { .session-add:hover { color: var(--ink); border-color: var(--muted); } }
+.session-new.page {
+  flex-direction: column; align-items: stretch; gap: 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); padding: 12px;
+}
+.session-new.page .session-fields { gap: 8px; }
+.session-new.page .session-fields input { padding: 8px 10px; background: var(--surface); }
+.session-new.page .session-confirm-actions { justify-content: flex-end; }
+:is(.session-settings, .session-menu) .puzzle-choice { gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+:is(.session-settings, .session-menu) .puzzle-choice button { border: 0; background: none; color: var(--muted); font-weight: 600; padding: 7px 0; border-radius: 6px; }
+:is(.session-settings, .session-menu) .puzzle-choice button.on { background: var(--ink); color: var(--bg); }
 
 /* Average breakdown: tap an average in Statistics to see its solves */
 .stat-btn { border: 0; background: none; padding: 2px 4px; margin: -2px -4px; font: inherit; color: inherit; border-radius: 4px; text-decoration: underline dotted color-mix(in srgb, var(--muted) 60%, transparent); text-underline-offset: 3px; }
@@ -750,3 +773,8 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .avg-detail-list li.trimmed .avg-time { color: var(--muted); }
 .avg-date { grid-area: date; font-size: 12px; color: var(--muted); text-align: right; }
 .avg-scr { grid-area: scr; font: 400 12.5px/1.4 var(--font-num); color: var(--muted); overflow-wrap: anywhere; word-spacing: 0.15em; }
+.export-row { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+/* Copy times / Clear solves inside the current session's card (Settings) */
+.session-list li:has(.session-current-actions) { flex-wrap: wrap; }
+.session-current-actions { flex: 1 0 100%; display: flex; gap: 8px; flex-wrap: wrap; padding: 0 12px 12px; }
+.session-current-actions button { padding: 6px 12px; font-size: 13.5px; }

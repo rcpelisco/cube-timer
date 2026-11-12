@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { knownCubes, nextName, type Session } from "../lib/sessions";
 import { PUZZLE_ORDER, PUZZLES, toPuzzle, type PuzzleId } from "../lib/puzzles";
 import type { SessionFields } from "../hooks/useSessions";
@@ -54,7 +54,13 @@ export function SessionPicker(props: SessionPickerProps) {
 
 // The session list (switch, edit, delete) and the new-session form. Used in the header menu and
 // on the Settings page; onDone runs after switching or creating (the menu closes then).
-export function SessionManager({ list, currentId, onSelect, onCreate, onUpdate, onDelete, onDone }: SessionPickerProps & { onDone?: () => void }) {
+// Sessions show as cards, and the new-session form stays folded behind a button until needed.
+// currentActions (e.g. Copy times / Clear solves) show inside the current session's card, and
+// onExport adds an export button to each card (both only on the Settings page).
+export function SessionManager({ list, currentId, onSelect, onCreate, onUpdate, onDelete, onDone, currentActions, onExport }: SessionPickerProps & {
+  onDone?: () => void; currentActions?: ReactNode; onExport?: (session: Session) => void;
+}) {
+  const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -69,9 +75,10 @@ export function SessionManager({ list, currentId, onSelect, onCreate, onUpdate, 
   const create = (e: FormEvent) => {
     e.preventDefault();
     onCreate({ name: draft.trim().slice(0, MAX_NAME) || nextName(list), cube: draftCube.slice(0, MAX_NAME), puzzle: newPuzzle });
-    setDraft(""); setDraftCube(""); setDraftPuzzle(null);
+    setDraft(""); setDraftCube(""); setDraftPuzzle(null); setAdding(false);
     onDone?.();
   };
+  const cancelNew = () => { setDraft(""); setDraftCube(""); setDraftPuzzle(null); setAdding(false); };
 
   return (
         <>
@@ -96,12 +103,20 @@ export function SessionManager({ list, currentId, onSelect, onCreate, onUpdate, 
                     <>
                       <button type="button" className="session-row" aria-current={s.id === current.id ? "true" : undefined}
                         onClick={() => { onSelect(s.id); onDone?.(); }}>
-                        <span className="session-name"><PuzzleBadge puzzle={toPuzzle(s.puzzle)} /> {s.name}</span>
+                        <span className="session-name">
+                          <PuzzleBadge puzzle={toPuzzle(s.puzzle)} /> <span className="session-name-text">{s.name}</span>
+                        </span>
                         {s.cube && <span className="session-cube"><CubeGlyph /> {s.cube}</span>}
                         <span className="session-meta">
-                          {s.solves.length} {s.solves.length === 1 ? "solve" : "solves"}{ao5 != null && ` · Ao5 ${fmt(ao5)}`}
+                          {s.solves.length.toLocaleString()} {s.solves.length === 1 ? "solve" : "solves"}{ao5 != null && ` · Ao5 ${fmt(ao5)}`}
                         </span>
                       </button>
+                      {onExport && (
+                        <button type="button" className="icon-btn" aria-label={`Export ${s.name}`} disabled={!s.solves.length}
+                          title={s.solves.length ? "Export this session as a csTimer file" : "No solves to export"} onClick={() => onExport(s)}>
+                          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v7.5M4.8 6.8 8 10l3.2-3.2M3 11.5v2h10v-2" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        </button>
+                      )}
                       <button type="button" className="icon-btn" aria-label={`Edit ${s.name}`} onClick={() => setEditing(s.id)}>
                         <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2.5 13.5 5 6 12.5H3.5V10z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>
                       </button>
@@ -110,22 +125,34 @@ export function SessionManager({ list, currentId, onSelect, onCreate, onUpdate, 
                         onClick={() => (s.solves.length ? setConfirming(s.id) : onDelete(s.id))}>
                         <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>
                       </button>
+                      {currentActions && s.id === current.id && <div className="session-current-actions">{currentActions}</div>}
                     </>
                   )}
                 </li>
               );
             })}
           </ul>
-          <form className="session-new" onSubmit={create}>
-            <div className="session-fields">
-              <PuzzleChoice value={newPuzzle} onChange={setDraftPuzzle} />
-              <input type="text" value={draft} maxLength={MAX_NAME} placeholder={nextName(list)}
-                aria-label="New session name" onChange={e => setDraft(e.target.value)} />
-              <input type="text" value={draftCube} maxLength={MAX_NAME} placeholder="Cube (optional)"
-                list={cubeListId} aria-label="Cube used in the new session" autoComplete="off" onChange={e => setDraftCube(e.target.value)} />
-            </div>
-            <button type="submit">New session</button>
-          </form>
+          {!adding ? (
+            <button type="button" className="session-add" onClick={() => setAdding(true)}>
+              <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+              New session
+            </button>
+          ) : (
+            <form className="session-new page" onSubmit={create}>
+              <span className="label">New session</span>
+              <div className="session-fields">
+                <PuzzleChoice value={newPuzzle} onChange={setDraftPuzzle} />
+                <input type="text" value={draft} maxLength={MAX_NAME} placeholder={nextName(list)} autoFocus
+                  aria-label="New session name" onChange={e => setDraft(e.target.value)} />
+                <input type="text" value={draftCube} maxLength={MAX_NAME} placeholder="Cube (optional)"
+                  list={cubeListId} aria-label="Cube used in the new session" autoComplete="off" onChange={e => setDraftCube(e.target.value)} />
+              </div>
+              <div className="session-confirm-actions">
+                <button type="button" onClick={cancelNew}>Cancel</button>
+                <button type="submit" className="on">Create</button>
+              </div>
+            </form>
+          )}
         </>
   );
 }

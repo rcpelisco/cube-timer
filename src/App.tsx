@@ -139,7 +139,7 @@ export default function App() {
       {view === "train" && <TrainerPage prefs={algPrefs} />}
       {view === "settings" && (
         <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
-          solveActions={{ solves, onClear: () => setSolves(() => []), session: current.name }} />
+          solveActions={{ solves, onClear: () => setSolves(() => []) }} />
       )}
 
       {/* The timer page stays mounted (hidden) on other pages so its state and scramble keep. */}

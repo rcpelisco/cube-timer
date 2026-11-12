@@ -1,13 +1,29 @@
 import { useRef, useState } from "react";
-import type { ImportResult } from "../lib/csTimer";
+import { exportCsTimer, type ImportResult } from "../lib/csTimer";
 import { PUZZLES } from "../lib/puzzles";
+import type { Session } from "../lib/sessions";
+import { exportFileName, saveTextFile } from "../lib/saveFile";
 
-// Settings card: pick a csTimer export file and add its sessions here.
-export function ImportCsTimer({ onImport }: { onImport: (text: string) => ImportResult }) {
+const n = (x: number, word: string) => `${x.toLocaleString()} ${word}${x === 1 ? "" : "s"}`;
+
+// Settings card: import a csTimer export file, or export every session in the same format.
+export function ImportCsTimer({ sessions, onImport }: { sessions: Session[]; onImport: (text: string) => ImportResult }) {
   const input = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [exportNote, setExportNote] = useState("");
+  const solveCount = sessions.reduce((a, s) => a + s.solves.length, 0);
+
+  const exportFile = async () => {
+    try {
+      if (await saveTextFile(exportFileName(), exportCsTimer(sessions))) {
+        setExportNote(`Exported ${n(solveCount, "solve")} from ${n(sessions.length, "session")}.`);
+      }
+    } catch {
+      setExportNote("Couldn't export the file.");
+    }
+  };
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
@@ -23,11 +39,10 @@ export function ImportCsTimer({ onImport }: { onImport: (text: string) => Import
   };
 
   const total = result?.added.reduce((a, s) => a + s.solves, 0) ?? 0;
-  const n = (x: number, word: string) => `${x.toLocaleString()} ${word}${x === 1 ? "" : "s"}`;
 
   return (
     <div className="panel settings-group">
-      <h2>Import</h2>
+      <h2>Import &amp; export</h2>
       <div className="setting-row">
         <span>
           <b>From csTimer</b>
@@ -60,6 +75,15 @@ export function ImportCsTimer({ onImport }: { onImport: (text: string) => Import
           )}
         </div>
       )}
+
+      <div className="setting-row export-row">
+        <span>
+          <b>Export</b>
+          <small>Saves all {n(sessions.length, "session")} ({n(solveCount, "solve")}) as a csTimer file, which csTimer or this app can import. To export one session, use the export button on it under Sessions.</small>
+        </span>
+      </div>
+      <button type="button" className="wide" disabled={!solveCount} onClick={exportFile}>Export to file</button>
+      {exportNote && <p className="setting-note" role="status">{exportNote}</p>}
     </div>
   );
 }

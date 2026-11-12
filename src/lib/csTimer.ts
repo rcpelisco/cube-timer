@@ -44,7 +44,27 @@ function toSolve(raw: unknown): Solve | null {
   return { t: Math.round(t), pen: p, scr, at };
 }
 
-const solveKey = (s: Solve) => `${s.at}:${s.t}`;
+// csTimer keeps dates to the second, so compare at that precision: a file exported from here and
+// imported back then matches the solves it came from.
+const solveKey = (s: Solve) => `${Math.round(s.at / 1000)}:${s.t}`;
+
+// Export every session as a csTimer file (the same format importCsTimer reads), so it can be
+// imported into csTimer, or back into this app on another device.
+const SCR_TYPE: Record<PuzzleId, string> = { "333": "333", "222": "222so", "444": "444wca", fto: "fto" };
+
+export function exportCsTimer(sessions: Session[]): string {
+  const data: Record<string, unknown> = {};
+  const meta: Record<string, unknown> = {};
+  sessions.forEach((s, i) => {
+    const id = i + 1;
+    data[`session${id}`] = s.solves.map(v => [
+      [v.pen === DNF ? -1 : v.pen === 2 ? 2000 : 0, v.t], v.scr, "", Math.round(v.at / 1000),
+    ]);
+    meta[id] = { name: s.name, opt: { scrType: SCR_TYPE[toPuzzle(s.puzzle)] }, rank: id };
+  });
+  data.properties = { sessionData: JSON.stringify(meta) };
+  return JSON.stringify(data);
+}
 
 export function importCsTimer(text: string, existing: Session[]): ImportResult {
   let data: Record<string, unknown>;
