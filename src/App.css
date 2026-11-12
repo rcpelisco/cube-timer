@@ -245,14 +245,15 @@ button:disabled { opacity: 0.5; cursor: default; }
 .preview-fto twisty-player { width: 300px; height: 150px; }
 .moves-444 { font-size: clamp(15px, 1.8vw, 18px); }
 
-/* Phone-only scramble thumbnail, under the moves in the scramble card */
-.preview.scramble-thumb { min-height: 0; margin-right: auto; place-items: start; }
-.scramble-thumb twisty-player, .scramble-thumb .cube-net { width: 140px; height: 105px; }
-.scramble-thumb.preview-fto twisty-player { width: 170px; height: 85px; }
-.scramble { align-items: flex-end; }
+/* Phone-only scramble thumbnail, in the bottom row beside the averages */
+.preview.scramble-thumb { min-height: 0; place-items: center; }
+.scramble-thumb twisty-player, .scramble-thumb .cube-net { width: 120px; height: 90px; }
+.scramble-thumb.preview-fto twisty-player { width: 140px; height: 70px; }
+.phone-lower { display: flex; gap: 10px; align-items: stretch; }
+.phone-lower .quick-stats { flex: 1 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 10px; align-content: center; }
 
 /* Thumbnail button + full-screen scrambled state (phones) */
-.thumb-btn { position: relative; padding: 6px; margin-right: auto; background: none; border-color: var(--line); }
+.thumb-btn { position: relative; flex: none; display: grid; place-items: center; padding: 8px; background: var(--surface); border-color: var(--line); border-radius: 10px; }
 .thumb-btn .preview.scramble-thumb { margin: 0; }
 .thumb-expand { position: absolute; right: 5px; bottom: 5px; color: var(--muted); }
 .scramble-overlay {
@@ -675,7 +676,7 @@ html.timer-bg body.solving .stage::before { filter: blur(var(--timer-bg-blur, 0p
 /* Status bar strip: let the photo through. */
 html.timer-bg body::before { background: transparent; }
 /* Cards turn to frosted glass so the photo shows around and through them. */
-html.timer-bg .scramble, html.timer-bg .panel, html.timer-bg .quick-stats {
+html.timer-bg .scramble, html.timer-bg .panel, html.timer-bg .quick-stats, html.timer-bg .thumb-btn {
   background: color-mix(in srgb, var(--surface) 72%, transparent);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }

@@ -17,7 +17,7 @@ export function ScrambleThumb({ puzzle, moves }: { puzzle: PuzzleId; moves: stri
 
   return (
     <>
-      <button ref={button} type="button" className="thumb-btn" disabled={!moves} aria-label="Show the scrambled state full screen"
+      <button ref={button} type="button" className="thumb-btn dimmable" disabled={!moves} aria-label="Show the scrambled state full screen"
         onClick={() => setOrigin(thumbCentre())}>
         <ScramblePreview className="scramble-thumb" puzzle={puzzle} moves={moves} />
         <svg className="thumb-expand" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">

@@ -149,8 +149,6 @@ export default function App() {
                 ? <span className="moves pending" role="alert">Couldn't generate a scramble. Try again.</span>
                 : <span className="moves pending" aria-live="polite">Generating scramble…</span>}
           </div>
-          {/* Phones get a thumbnail here (tap for full screen) instead of the preview card. */}
-          {isPhone && <ScrambleThumb puzzle={puzzle} moves={scramble?.moves ?? null} />}
           <button type="button" onClick={nextScramble} disabled={!scramble && !scrambleFailed}>
             {scrambleFailed ? "Try again" : "New scramble"}
           </button>
@@ -167,7 +165,14 @@ export default function App() {
           </div>
         </div>
 
-        {isPhone ? <QuickStats solves={solves} /> : (
+        {/* Phones: a scrambled-state thumbnail (tap for full screen) beside the averages,
+            instead of the trend chart and preview card. */}
+        {isPhone ? (
+          <div className="phone-lower">
+            <ScrambleThumb puzzle={puzzle} moves={scramble?.moves ?? null} />
+            <QuickStats solves={solves} />
+          </div>
+        ) : (
           <div className="lower dimmable">
             <TrendChart solves={solves} />
             <div className="panel net">
