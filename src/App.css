@@ -875,3 +875,12 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .setting-row.off { cursor: default; }
 .setting-row.off > span, .setting-row.off input.switch { opacity: 0.45; }
 .setting-row.off input.switch { cursor: default; }
+
+/* Trainer drills (last layer, cross) */
+.trainer-plan { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--muted); }
+.trainer-stats tr.current td:first-child { color: var(--accent); }
+.trainer-last > .trainer-ll { flex: 1; gap: 12px; }
+.trainer-ll h2 span, .trainer-cross h2 span { font-family: var(--font-num); color: var(--accent); margin-left: 6px; }
+.trainer-ll-step { display: flex; gap: 14px; align-items: center; }
+.trainer-ll-step > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.trainer-ll-step .trainer-diagram { width: 76px; }

@@ -3,6 +3,7 @@ import { ALGS, isAlgSet, puzzleOf, setupFor, type AlgCase, type AlgSet } from ".
 import { PBL } from "./algs2x2";
 import { rotationFor, type CrossColor } from "./crossColor";
 import type { LearnStatus } from "./algStatus";
+import { isCrossLevel, isDrill, type CrossLevel, type Drill } from "./drills";
 
 // OLL/PLL trainer: a scramble that leaves a chosen last-layer case, timed per case.
 //
@@ -72,7 +73,10 @@ export interface TrainerState {
   set: AlgSet;
   pool: LearnStatus[];                      // which learning statuses to practise
   picked: Partial<Record<AlgSet, string[]>>; // chosen case ids per set; missing = every case
-  times: Record<string, number[]>;          // ms per case id, oldest first
+  times: Record<string, number[]>;          // ms per case id (or drillKey), oldest first
+  drill: Drill | null;                      // last layer or cross practice instead of cases
+  level: CrossLevel;                        // cross difficulty
+  plan: boolean;                            // 15 s planning time before a cross
 }
 
 const KEY = "cubeTimer.trainer";
@@ -83,10 +87,13 @@ export function loadTrainer(): TrainerState {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<TrainerState> | null;
     if (v && isAlgSet(v.set) && Array.isArray(v.pool) && v.times && typeof v.times === "object") {
       const picked = v.picked && typeof v.picked === "object" ? v.picked : {};
-      return { set: v.set, pool: v.pool, picked, times: v.times };
+      return {
+        set: v.set, pool: v.pool, picked, times: v.times,
+        drill: isDrill(v.drill) ? v.drill : null, level: isCrossLevel(v.level) ? v.level : "any", plan: v.plan !== false,
+      };
     }
   } catch { /* fall through */ }
-  return { set: "OLL", pool: ["learning", "learned"], picked: {}, times: {} };
+  return { set: "OLL", pool: ["learning", "learned"], picked: {}, times: {}, drill: null, level: "any", plan: true };
 }
 
 export function saveTrainer(s: TrainerState) {

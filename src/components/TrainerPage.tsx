@@ -5,6 +5,8 @@ import type { AlgPrefs } from "../lib/algPrefs";
 import { STATUS_LABEL, STATUS_ORDER, statusOf, type LearnStatus } from "../lib/algStatus";
 import { CROSS_COLORS } from "../lib/crossColor";
 import { fmt } from "../lib/stats";
+import { CROSS_LEVELS, type Drill } from "../lib/drills";
+import { DrillRun } from "./TrainerDrill";
 import { addTime, caseScramble, caseStats, casesFor, loadTrainer, nextCase, saveTrainer, type TrainerState } from "../lib/trainer";
 import { useTimer } from "../hooks/useTimer";
 import { useFocusMode } from "../hooks/useFocusMode";
@@ -41,7 +43,15 @@ export function TrainerPage({ prefs: { prefs } }: { prefs: ReturnType<typeof use
   );
   const poolKey = `${store.set}|${pool.map(c => c.id).join(",")}|${cross}`;
 
-  const setSet = (set: AlgSet) => setStore(s => ({ ...s, set }));
+  const setSet = (set: AlgSet) => setStore(s => ({ ...s, set, drill: null }));
+  const setDrill = (drill: Drill) => setStore(s => ({ ...s, drill }));
+  // Last layer and cross practice sit with the 3×3 sets.
+  const drill = puzzle === "3x3" ? store.drill : null;
+  const modes: { id: string; label: string; on: boolean; pick: () => void }[] = [
+    ...SETS[puzzle].map(set => ({ id: set, label: SET_LABEL[set], on: !drill && store.set === set, pick: () => setSet(set) })),
+    ...(puzzle === "3x3" ? ([["LL", "Last layer"], ["cross", "Cross"]] as const).map(([id, label]) => (
+      { id, label, on: drill === id, pick: () => setDrill(id) })) : []),
+  ];
   const togglePool = (st: LearnStatus) => setStore(s => ({
     ...s, pool: s.pool.includes(st) ? s.pool.filter(x => x !== st) : [...s.pool, st],
   }));
@@ -60,13 +70,28 @@ export function TrainerPage({ prefs: { prefs } }: { prefs: ReturnType<typeof use
                 onClick={() => { if (p !== puzzle) setSet(SETS[p][0]); }}>{p.replace("x", "×")}</button>
             ))}
           </div>
-          <div className="segmented" role="radiogroup" aria-label="Algorithm set">
-            {SETS[puzzle].map(set => (
-              <button key={set} type="button" role="radio" aria-checked={store.set === set} className={store.set === set ? "on" : ""}
-                onClick={() => setSet(set)}>{SET_LABEL[set]}</button>
+          <div className="segmented" role="radiogroup" aria-label="What to practise" style={{ gridTemplateColumns: `repeat(${modes.length}, auto)` }}>
+            {modes.map(m => (
+              <button key={m.id} type="button" role="radio" aria-checked={m.on} className={m.on ? "on" : ""}
+                onClick={m.pick}>{m.label}</button>
             ))}
           </div>
         </div>
+        {drill === "cross" && (
+          <div className="trainer-sets">
+            <div className="view-tabs" role="radiogroup" aria-label="Cross difficulty">
+              {CROSS_LEVELS.map(l => (
+                <button key={l.id} type="button" role="radio" aria-checked={store.level === l.id} title={l.note}
+                  className={store.level === l.id ? "on" : ""} onClick={() => setStore(s => ({ ...s, level: l.id }))}>{l.label}</button>
+              ))}
+            </div>
+            <label className="trainer-plan">
+              <input type="checkbox" className="switch" checked={store.plan} onChange={e => setStore(s => ({ ...s, plan: e.target.checked }))} />
+              15 s planning
+            </label>
+          </div>
+        )}
+        {!drill && <>
         <div className="status-filter" role="group" aria-label="Cases to practise">
           {STATUS_ORDER.map(st => {
             const n = all.filter(c => statusOf(statuses, c.id) === st).length;
@@ -82,9 +107,12 @@ export function TrainerPage({ prefs: { prefs } }: { prefs: ReturnType<typeof use
           <CasePicker cases={byStatus} allIds={all.map(c => c.id)} picked={picked} onChange={setPicked}
             choices={prefs.choices} cross={cross} />
         )}
+        </>}
       </div>
 
-      {pool.length === 0 ? (
+      {drill ? (
+        <DrillRun drill={drill} level={store.level} plan={store.plan} cross={cross} choices={prefs.choices} times={store.times} setStore={setStore} />
+      ) : pool.length === 0 ? (
         <p className="trainer-empty panel">
           {byStatus.length === 0
             ? <>No {puzzle === "2x2" ? "2×2 " : ""}{SET_LABEL[store.set]} cases to practise. Turn on a status above, or mark cases as Learning on the Algorithms page.</>
