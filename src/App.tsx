@@ -33,6 +33,7 @@ import { SolveDetail } from "./components/SolveDetail";
 import { TabBar } from "./components/TabBar";
 import { ScrollTop } from "./components/ScrollTop";
 import { EmptySolves } from "./components/EmptySolves";
+import { StatsHero } from "./components/StatsHero";
 import { QuickStats } from "./components/QuickStats";
 import { TodayRing } from "./components/TodayRing";
 import { SplitsBadge } from "./components/SplitsBadge";
@@ -386,6 +387,7 @@ export default function App() {
           <section className="solves-page">
             {solves.length ? <>
               <div className="solves-actions"><SolveActions solves={solves} onClear={() => setSolves(() => [])} /></div>
+              <StatsHero solves={solves} />
               {statsPanel}
               <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} />
               {solveList}

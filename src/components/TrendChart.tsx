@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useId, useState } from "react";
 import { avgOf, eff, fmt, type Solve } from "../lib/stats";
 import type { Session } from "../lib/sessions";
 import { Spread } from "./Spread";
@@ -59,18 +59,33 @@ function Chart({ pts, aoPts, start, end }: { pts: [number, number][]; aoPts: [nu
   const Y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
   const path = (arr: [number, number][]) => arr.map((p, k) => `${k ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
   const last = pts[pts.length - 1];
+  // The Ao5 line's soft fill: the area between it and the bottom, fading out downwards.
+  const fillId = useId();
+  const aoArea = aoPts.length > 1
+    ? `${path(aoPts)}L${X(aoPts[aoPts.length - 1][0]).toFixed(1)},${H - B}L${X(aoPts[0][0]).toFixed(1)},${H - B}Z`
+    : null;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Solve times trend">
+      <defs>
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="var(--accent)" stopOpacity={0.24} />
+          <stop offset="1" stopColor="var(--accent)" stopOpacity={0} />
+        </linearGradient>
+      </defs>
       {[hi, (hi + lo) / 2, lo].map(v => (
         <g key={v}>
           <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--line)" strokeWidth={1} />
           <text x={L - 6} y={Y(v) + 4} textAnchor="end" fontSize={11} fill="var(--muted)" fontFamily="Chivo Mono, monospace">{fmt(v)}</text>
         </g>
       ))}
-      <path d={path(pts)} fill="none" stroke="var(--muted)" strokeWidth={1.2} vectorEffect="non-scaling-stroke" opacity={0.7} />
-      {aoPts.length > 1 && <path d={path(aoPts)} fill="none" stroke="var(--accent)" strokeWidth={2.2} vectorEffect="non-scaling-stroke" />}
-      <circle cx={X(last[0])} cy={Y(last[1])} r={3} fill="var(--ink)" />
+      {/* Drawn in from the left when the chart first shows (not on every solve). */}
+      <g className="trend-lines">
+        {aoArea && <path d={aoArea} fill={`url(#${CSS.escape(fillId)})`} stroke="none" />}
+        <path d={path(pts)} fill="none" stroke="var(--muted)" strokeWidth={1.2} vectorEffect="non-scaling-stroke" opacity={0.7} />
+        {aoPts.length > 1 && <path d={path(aoPts)} fill="none" stroke="var(--accent)" strokeWidth={2.2} vectorEffect="non-scaling-stroke" />}
+      </g>
+      <circle className="trend-last" cx={X(last[0])} cy={Y(last[1])} r={3} fill="var(--ink)" />
     </svg>
   );
 }
