@@ -30,9 +30,9 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   solveActions?: { solves: Solve[]; onClear: () => void };
   onImport: (text: string) => ImportResult;
 }) {
-  const { enabled, user, sync, error, onSignIn, onSignOut, onSignOutAndClear, onDeleteCloud } = account;
-  // Shown once signed out after deleting the cloud copy; gone on the next sign-in.
-  const [cloudDeleted, setCloudDeleted] = useState(false);
+  const { enabled, user, sync, error, onSignIn, onSignOut, onSignOutAndClear, onDeleteAccount } = account;
+  // Shown once signed out after deleting the account; gone on the next sign-in.
+  const [deleted, setDeleted] = useState<"done" | "partial" | null>(null);
   const name = user?.displayName || user?.email || "Signed in";
   const [hideTime, setHideTime] = useHideTime();
   const [showTriggers, setShowTriggers] = useShowTriggers();
@@ -139,10 +139,12 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           <p className="setting-note">Sign-in isn't set up for this copy of the app.</p>
         ) : !user ? (
           <>
-            {cloudDeleted
-              ? <p className="setting-note" role="status">Your cloud data was deleted and you've been signed out. Your solves are still on this device.</p>
-              : <p className="setting-note">Sign in to sync your solves, sessions and algorithm progress between devices.</p>}
-            <button type="button" className="google wide" onClick={() => { setCloudDeleted(false); onSignIn(); }}><GoogleMark /> Sign in with Google</button>
+            {deleted === "done"
+              ? <p className="setting-note" role="status">Your account and its cloud data were deleted. Your solves are still on this device.</p>
+              : deleted === "partial"
+                ? <p className="account-error" role="alert">Your cloud data was deleted, but your sign-in record couldn't be. Sign in and use Delete account again to finish.</p>
+                : <p className="setting-note">Sign in to sync your solves, sessions and algorithm progress between devices.</p>}
+            <button type="button" className="google wide" onClick={() => { setDeleted(null); onSignIn(); }}><GoogleMark /> Sign in with Google</button>
             {error && <p className="account-error" role="alert">{error}</p>}
           </>
         ) : (
@@ -168,7 +170,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
                 </p>
               </>
             )}
-            {onDeleteCloud && <DeleteCloudData email={user.email} onDelete={onDeleteCloud} onDeleted={() => setCloudDeleted(true)} />}
+            {onDeleteAccount && <DeleteAccount email={user.email} onDelete={onDeleteAccount} onDone={setDeleted} />}
           </>
         )}
         {enabled && appCheckSiteKey && (
@@ -191,8 +193,8 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
               and appearance settings stay on this device.
             </p>
             <p className="setting-note">
-              Delete cloud data (under Account, once signed in) removes them from Firebase; Sign out and remove
-              from this device clears this browser. Your Google sign-in record itself is kept by Firebase.
+              Delete account (under Account, once signed in) removes them and your sign-in record from Firebase;
+              Sign out and remove from this device clears this browser.
             </p>
           </>
         )}
@@ -222,36 +224,53 @@ function CspReportList() {
   );
 }
 
-// Settings › Account, signed in: delete everything this account has in the cloud. A first tap
-// explains what happens; the second deletes, then the app signs out (see App.tsx).
-function DeleteCloudData({ email, onDelete, onDeleted }: { email: string | null; onDelete: () => Promise<void>; onDeleted: () => void }) {
+// Settings › Account, signed in: delete the account, meaning its cloud data and its sign-in
+// record, and optionally this device's copy. A first tap explains what happens; the second
+// deletes (App.tsx, useAuth's deleteAccount), which signs out.
+const DELETE_ERRORS: Record<string, string> = {
+  offline: "You're offline. Connect and try again.",
+  cancelled: "Deleting needs you to confirm with Google. Try again.",
+  reauth: "For your security, sign out, sign in again, then delete within a few minutes.",
+};
+
+function DeleteAccount({ email, onDelete, onDone }: {
+  email: string | null; onDelete: (alsoDevice: boolean) => Promise<void>; onDone: (result: "done" | "partial") => void;
+}) {
   const [step, setStep] = useState<"idle" | "confirm" | "deleting">("idle");
+  const [alsoDevice, setAlsoDevice] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const run = () => {
     setStep("deleting");
     setFailed(null);
-    onDelete().then(onDeleted, (e: unknown) => {
+    onDelete(alsoDevice).then(() => onDone("done"), (e: unknown) => {
+      const code = (e as Error)?.message;
+      if (code === "partial") { onDone("partial"); return; }
       setStep("confirm");
-      setFailed((e as Error)?.message === "offline" ? "You're offline. Connect and try again." : "Couldn't delete everything. Try again.");
+      setFailed(DELETE_ERRORS[code] ?? "Couldn't delete everything. Try again.");
     });
   };
   if (step === "idle") {
-    return <button type="button" className="wide danger" onClick={() => setStep("confirm")}>Delete cloud data</button>;
+    return <button type="button" className="wide danger" onClick={() => setStep("confirm")}>Delete account</button>;
   }
   return (
-    <div className="delete-cloud" role="group" aria-label="Delete cloud data">
+    <div className="delete-cloud" role="group" aria-label="Delete account">
       <p>
-        Delete everything stored in the cloud{email ? <> for <b>{email}</b></> : ""}? Your sessions, solves and
-        algorithm progress are removed from the cloud and you'll be signed out. This device keeps its copy.
+        Delete the account{email ? <> for <b>{email}</b></> : ""}? Your sessions, solves and algorithm progress are
+        removed from the cloud, along with your sign-in record, and you'll be signed out. This can't be undone.
       </p>
       <p className="setting-note">
-        Other devices still signed in will upload their copy again the next time they sync. Sign out on them first.
+        You may be asked to confirm with Google. Sign out on your other devices first, or they may upload their copy
+        again before they're signed out.
       </p>
+      <label className="delete-device">
+        <input type="checkbox" checked={alsoDevice} onChange={e => setAlsoDevice(e.target.checked)} disabled={step === "deleting"} />
+        Also remove my solves from this device
+      </label>
       {failed && <p className="account-error" role="alert">{failed}</p>}
       <div className="delete-cloud-actions">
         <button type="button" onClick={() => { setStep("idle"); setFailed(null); }} disabled={step === "deleting"}>Cancel</button>
         <button type="button" className="danger strong" onClick={run} disabled={step === "deleting"}>
-          {step === "deleting" ? "Deleting…" : "Delete cloud data"}
+          {step === "deleting" ? "Deleting…" : "Delete account"}
         </button>
       </div>
     </div>

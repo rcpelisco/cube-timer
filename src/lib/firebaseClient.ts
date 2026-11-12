@@ -26,7 +26,7 @@ export const auth = getAuth(app);
 export const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 
 export {
-  GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut,
+  GoogleAuthProvider, deleteUser, getRedirectResult, onAuthStateChanged, reauthenticateWithPopup, signInWithPopup, signInWithRedirect, signOut,
 } from "firebase/auth";
 export {
   clearIndexedDbPersistence, collection, doc, getDocsFromServer, onSnapshot, onSnapshotsInSync, serverTimestamp, terminate, writeBatch,

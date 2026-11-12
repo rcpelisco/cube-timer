@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "firebase/auth";
+import { forgetAccount } from "../lib/deviceOwner";
 import { firebaseEnabled, loadFirebase, rememberSignedIn, mayBeSignedIn, type FirebaseClient } from "../lib/firebase";
 
 // Popups are unreliable in an iOS home-screen app, so it uses the redirect flow there.
@@ -66,5 +67,31 @@ export function useAuth() {
 
   const signOutUser = useCallback(() => { if (fb) fb.signOut(fb.auth); }, [fb]);
 
-  return { user, error, signIn, signOut: signOutUser };
+  // Deletes the account: `before` (deleting its cloud data) runs first, then the sign-in record
+  // goes and the app is signed out. Firebase only deletes a sign-in from the last few minutes, so
+  // an older one is confirmed with Google first, before anything is deleted. Rejects with
+  // "offline", "cancelled" (the confirmation was closed), "reauth" (sign in again first: popups
+  // don't work in the home-screen app) or "partial" (data deleted, sign-in record not).
+  const deleteAccount = useCallback(async (before: () => Promise<void>) => {
+    const m = await load();
+    const u = m.auth.currentUser;
+    if (!u) return;
+    if (!navigator.onLine) throw new Error("offline");
+    const signedInAt = Date.parse(u.metadata.lastSignInTime ?? "") || 0;
+    if (Date.now() - signedInAt > 4 * 60_000) {
+      if (isStandalone()) throw new Error("reauth");
+      try { await m.reauthenticateWithPopup(u, provider(m)); } catch (e) {
+        const code = (e as { code?: unknown } | null)?.code;
+        throw new Error(typeof code === "string" && IGNORED.has(code) ? "cancelled" : "reauth");
+      }
+    }
+    await before();
+    forgetAccount(u.uid);
+    try { await m.deleteUser(u); } catch {
+      await m.signOut(m.auth).catch(() => {});
+      throw new Error("partial");
+    }
+  }, [load]);
+
+  return { user, error, signIn, signOut: signOutUser, deleteAccount };
 }

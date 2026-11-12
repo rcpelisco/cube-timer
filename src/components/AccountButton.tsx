@@ -11,7 +11,8 @@ export interface AccountProps {
   onSignOut: () => void;
   // Sign out and remove this person's data from the device (App.tsx); offered once synced.
   onSignOutAndClear?: () => Promise<void>;
-  onDeleteCloud?: () => Promise<void>;
+  // Delete the account: cloud data and sign-in record, optionally this device's copy (App.tsx).
+  onDeleteAccount?: (alsoDevice: boolean) => Promise<void>;
 }
 
 

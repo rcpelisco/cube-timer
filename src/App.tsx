@@ -3,7 +3,7 @@ import { bestRolling, DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solv
 import { FORMATS, limitPenalty, moveOldRounds, pastRounds, roundStatus, toRecord, useMockComp } from "./lib/mockComp";
 import { fireConfetti } from "./lib/confetti";
 import { load, save, wipeDevice } from "./lib/storage";
-import { firebaseEnabled, loadFirebase } from "./lib/firebase";
+import { firebaseEnabled, loadFirebase, type FirebaseClient } from "./lib/firebase";
 import { PUZZLES, toPuzzle } from "./lib/puzzles";
 import { importCsTimer } from "./lib/csTimer";
 import { useBoolPref } from "./lib/boolPref";
@@ -56,6 +56,16 @@ if (typeof window !== "undefined") {
     if (typeof requestIdleCallback === "function") requestIdleCallback(prefetch, { timeout: 4000 });
     else setTimeout(prefetch, 2000);
   }, { once: true });
+}
+
+// Removes this person's data from the device, including Firestore's offline copy, and reloads.
+async function clearDevice(fb: FirebaseClient) {
+  wipeDevice();
+  try {
+    await fb.terminate(fb.db);
+    await fb.clearIndexedDbPersistence(fb.db);
+  } catch { /* another tab still has it open; the cache only holds what the account could read */ }
+  location.reload();
 }
 
 const loaded = load();
@@ -276,25 +286,24 @@ export default function App() {
     landed && !active && landedGoal && "goal",
   ].filter(Boolean).join(" ");
 
-  // Clears the cloud copy, then signs out so this device doesn't upload its data straight back.
-  const signOut = auth.signOut;
-  const onDeleteCloud = useCallback(async () => { await deleteCloud(); signOut(); }, [deleteCloud, signOut]);
   // For a shared device: signs out, then removes this person's solves, sessions and algorithm
   // progress from it, along with Firestore's offline copy, and starts the app afresh. Only offered
   // once everything is synced, so nothing is lost.
   const onSignOutAndClear = useCallback(async () => {
     const fb = await loadFirebase();
     await fb.signOut(fb.auth);
-    wipeDevice();
-    try {
-      await fb.terminate(fb.db);
-      await fb.clearIndexedDbPersistence(fb.db);
-    } catch { /* another tab still has it open; the cache only holds what the account can read */ }
-    location.reload();
+    await clearDevice(fb);
   }, []);
+  // Deletes the account's cloud data and its sign-in record (useAuth), which signs out; this
+  // device keeps its copy unless `alsoDevice`.
+  const deleteAccount = auth.deleteAccount;
+  const onDeleteAccount = useCallback(async (alsoDevice: boolean) => {
+    await deleteAccount(deleteCloud);
+    if (alsoDevice) await clearDevice(await loadFirebase());
+  }, [deleteAccount, deleteCloud]);
   const account = {
     enabled: firebaseEnabled, user: auth.user, sync, error: auth.error,
-    onSignIn: auth.signIn, onSignOut: auth.signOut, onSignOutAndClear, onDeleteCloud,
+    onSignIn: auth.signIn, onSignOut: auth.signOut, onSignOutAndClear, onDeleteAccount,
   };
   const setSessionGoal = sessions.setGoal;
   const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);

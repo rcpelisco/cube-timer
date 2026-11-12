@@ -1231,5 +1231,6 @@ body.solving .splits-badge { display: none; }
 .delete-cloud p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.45; }
 .delete-cloud b { overflow-wrap: anywhere; }
 .delete-cloud .account-error { max-width: none; }
+.delete-device { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 13.5px; }
 .delete-cloud-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .delete-cloud-actions .strong { font-weight: 600; }
