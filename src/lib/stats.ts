@@ -39,6 +39,34 @@ export function bestRolling(solves: Solve[], fn: Stat, n: number): number | null
   return best;
 }
 
+// The solves behind an average: the latest n ("current") or the window that gave the best value.
+// `trimmed` holds the positions (within `solves`) that a trimmed average leaves out: the fastest
+// and slowest, 1 each up to Ao12 and 5% each above, as in avgOf. Means (Mo3) trim nothing.
+export interface AverageWindow { start: number; solves: Solve[]; value: number; trimmed: Set<number> }
+
+export function averageWindow(solves: Solve[], fn: Stat, n: number, which: "current" | "best"): AverageWindow | null {
+  let start = solves.length - n;
+  if (start < 0) return null;
+  if (which === "best") {
+    const best = bestRolling(solves, fn, n);
+    if (best == null) return null;
+    for (let i = 0; i + n <= solves.length; i++) {
+      if (fn(solves.slice(i, i + n), n) === best) { start = i; break; }
+    }
+  }
+  const win = solves.slice(start, start + n);
+  const value = fn(win, n);
+  if (value == null) return null;
+  const trimmed = new Set<number>();
+  if (fn === avgOf) {
+    const trim = n <= 12 ? 1 : Math.ceil(n * 0.05);
+    const order = win.map((_, i) => i).sort((a, b) => eff(win[a]) - eff(win[b]) || a - b);
+    order.slice(0, trim).forEach(i => trimmed.add(i));
+    order.slice(n - trim).forEach(i => trimmed.add(i));
+  }
+  return { start, solves: win, value, trimmed };
+}
+
 // Which personal bests `solve` sets when it's added after `prev` (best single, Ao5, Ao12 in the
 // session). A first-ever time isn't a "new" best, so each needs an earlier result to beat.
 export type PbKind = "Single" | "Ao5" | "Ao12";
