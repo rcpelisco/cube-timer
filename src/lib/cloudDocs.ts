@@ -1,7 +1,7 @@
 // How synced data is laid out in Firestore, split so no document gets near the 1 MiB limit:
 //
 //   users/{uid}                    { layout: 2, inspection, algs, order: [sessionId…], updatedAt }
-//   users/{uid}/sessions/{id}      { name, createdAt, puzzle?, cube?, chunks }
+//   users/{uid}/sessions/{id}      { name, createdAt, puzzle?, cube?, goal?, chunks }
 //   users/{uid}/chunks/{id}_{k}    { sid, k, solves: [ …up to CHUNK solves ] }
 //
 // Chunk k holds solves k·CHUNK … (k+1)·CHUNK−1 of the session, so adding a solve rewrites only the
@@ -39,6 +39,7 @@ export function toDocs(state: SyncState): Map<string, Doc> {
     const meta: Doc = { name: s.name, createdAt: s.createdAt, chunks };
     if (s.puzzle) meta.puzzle = s.puzzle;
     if (s.cube) meta.cube = s.cube;
+    if (s.goal) meta.goal = s.goal;
     docs.set(`sessions/${s.id}`, meta);
     for (let k = 0; k < chunks; k++) {
       docs.set(`chunks/${s.id}_${k}`, { sid: s.id, k, solves: s.solves.slice(k * CHUNK, (k + 1) * CHUNK) });
@@ -81,6 +82,7 @@ export function fromDocs(user: Doc | null, sessionDocs: [string, Doc][], chunkDo
     const s: Session = { id, name: String(d.name ?? "Session"), createdAt: Number(d.createdAt) || 0, solves };
     if (typeof d.puzzle === "string") s.puzzle = d.puzzle as Session["puzzle"];
     if (typeof d.cube === "string" && d.cube) s.cube = d.cube;
+    if (typeof d.goal === "number" && d.goal > 0) s.goal = d.goal;
     byId.set(id, s);
   }
   // Listed order first; anything the list doesn't know about (written mid-update) after, oldest first.

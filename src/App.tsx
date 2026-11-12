@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { eff, fmt, MAX_NOTE, newBests, type Penalty } from "./lib/stats";
+import { DNF, eff, fmt, MAX_NOTE, newBests, type Penalty } from "./lib/stats";
 import { fireConfetti } from "./lib/confetti";
 import { load, save } from "./lib/storage";
 import { firebaseEnabled } from "./lib/firebase";
 import { PUZZLES, toPuzzle } from "./lib/puzzles";
 import { importCsTimer } from "./lib/csTimer";
+import { useBoolPref } from "./lib/boolPref";
+import { callOut, inspectionCallsPref, unlockSpeech } from "./lib/inspectionCalls";
 import { useTimer } from "./hooks/useTimer";
 import { useSessions } from "./hooks/useSessions";
 import { useScramble } from "./hooks/useScramble";
@@ -76,6 +78,23 @@ export default function App() {
   // The timer only listens for keys and taps while its page is showing.
   const timer = useTimer({ stageRef, inspection, onFinish, enabled: showTimer });
   const active = timer.phase !== "idle";
+  const phaseRef = useRef(timer.phase);
+  useEffect(() => { phaseRef.current = timer.phase; }, [timer.phase]);
+
+  // "Eight seconds", "Twelve seconds" during inspection. Speech is unlocked on the first tap or key.
+  const [calls] = useBoolPref(inspectionCallsPref);
+  useEffect(() => {
+    if (calls && inspection && timer.phase === "inspect" && timer.warn) callOut(timer.warn);
+    // Only when the warning steps up, not on every frame of the countdown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timer.warn]);
+  useEffect(() => {
+    if (!calls || !inspection) return;
+    const opts = { capture: true, passive: true };
+    window.addEventListener("pointerdown", unlockSpeech, opts);
+    window.addEventListener("keydown", unlockSpeech, opts);
+    return () => { window.removeEventListener("pointerdown", unlockSpeech, opts); window.removeEventListener("keydown", unlockSpeech, opts); };
+  }, [calls, inspection]);
   useFocusMode(active);
   const hasBg = useTimerBgLayer(showTimer || view === "train");
 
@@ -108,6 +127,47 @@ export default function App() {
   };
 
   const last = solves[solves.length - 1];
+  // Deleting the last solve from under the timer asks first. Which solve the question is for (by
+  // its time stamp), so it lapses when another solve comes in.
+  const [confirmAt, setConfirmAt] = useState<number | null>(null);
+  const confirming = !!last && confirmAt === last.at;
+  const confirmingRef = useRef(confirming);
+  useEffect(() => { confirmingRef.current = confirming; }, [confirming]);
+  const askDelete = useCallback(() => setConfirmAt(solvesRef.current[solvesRef.current.length - 1]?.at ?? null), []);
+  const keepSolve = useCallback(() => setConfirmAt(null), []);
+  const confirmDelete = useCallback(() => {
+    const i = solvesRef.current.length - 1;
+    if (i >= 0) deleteSolve(i);
+    setConfirmAt(null);
+  }, [deleteSolve]);
+
+  // Keyboard shortcuts for the last solve, while the timer is idle on its page:
+  // 2 or + toggles +2, D toggles DNF, N opens its note, Backspace or Delete asks to delete it
+  // (Enter deletes, Esc or any other key keeps it).
+  useEffect(() => {
+    if (!showTimer) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || phaseRef.current !== "idle") return;
+      if ((e.target as Element | null)?.matches?.("input, textarea, select, [contenteditable]")) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      const i = solvesRef.current.length - 1;
+      if (i < 0) return;
+      const key = e.key.toLowerCase();
+      if (confirmingRef.current) {
+        if (key === "enter") { e.preventDefault(); confirmDelete(); }
+        else { if (key === "escape" || key === "backspace" || key === "delete") e.preventDefault(); keepSolve(); }
+        return;
+      }
+      if (key === "2" || key === "+") setPenalty(i, 2);
+      else if (key === "d") setPenalty(i, DNF);
+      else if (key === "n") { setNoteAt(null); setNoteOpen(true); }
+      else if (key === "backspace" || key === "delete") askDelete();
+      else return;
+      e.preventDefault(); // N mustn't also type an "n" into the note it opens
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showTimer, setPenalty, askDelete, confirmDelete, keepSolve]);
   // Re-checked against the solve as it is now, so a +2, DNF or delete takes the badge away.
   const pbKinds = useMemo(
     () => (last && last.at === pbAt ? newBests(solves.slice(0, -1), last) : []),
@@ -130,7 +190,9 @@ export default function App() {
   ].filter(Boolean).join(" ");
 
   const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut };
-  const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} />;
+  const setSessionGoal = sessions.setGoal;
+  const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);
+  const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} goal={current.goal} onGoal={setGoal} />;
   const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote} />;
 
   const sessionProps = {
@@ -182,8 +244,15 @@ export default function App() {
           )}
           <div className="hint dimmable">{hint}</div>
           <div className="last-actions dimmable">
-            {last && !active && <>
-              <PenaltyButtons i={solves.length - 1} solve={last} onPenalty={setPenalty} onDelete={deleteSolve} />
+            {last && !active && confirming && (
+              <div className="delete-confirm" role="alertdialog" aria-label="Delete this solve?">
+                <span>Delete {last.pen === DNF ? "this DNF" : fmt(eff(last))}?</span>
+                <button type="button" onClick={keepSolve}>Keep{!isTouch && <kbd>Esc</kbd>}</button>
+                <button type="button" className="danger on" onClick={confirmDelete}>Delete{!isTouch && <kbd>Enter</kbd>}</button>
+              </div>
+            )}
+            {last && !active && !confirming && <>
+              <PenaltyButtons i={solves.length - 1} solve={last} onPenalty={setPenalty} onDelete={askDelete} />
               <button type="button" className="note-btn" aria-label={last.note ? "Edit note on this solve" : "Add a note to this solve"}
                 title={last.note || undefined} onClick={() => setNoteOpen(true)}>
                 {last.note ? "✎ Note" : "+ Note"}

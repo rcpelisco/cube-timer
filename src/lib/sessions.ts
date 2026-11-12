@@ -7,6 +7,15 @@ import type { PuzzleId } from "./puzzles";
 // (Firestore rejects undefined fields, so the key is left out rather than set to undefined).
 export interface Session {
   id: string; name: string; createdAt: number; solves: Solve[]; puzzle?: PuzzleId; cube?: string;
+  // A "sub-X" target in ms (e.g. 12000 for sub-12); left out when there is none.
+  goal?: number;
+}
+
+// The session with `goal` set, or removed for null.
+export function withGoal(session: Session, goal: number | null): Session {
+  const rest = { ...session };
+  delete rest.goal;
+  return goal && goal > 0 ? { ...rest, goal } : rest;
 }
 
 // crypto.randomUUID needs a secure context, which a phone on the LAN dev server isn't.

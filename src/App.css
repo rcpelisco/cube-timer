@@ -847,3 +847,31 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .scramble-overlay.closing > :not(.zoom-pic) { animation: fade-out 120ms ease-in forwards; }
 @keyframes bg-out { to { background-color: transparent; } }
 @media (prefers-reduced-motion: reduce) { .scramble-overlay, .scramble-overlay > * { animation: none !important; } }
+
+/* Sub-X goal, under Statistics */
+.goal-set { width: 100%; margin-top: 12px; border: 1px dashed var(--line); background: none; color: var(--muted); font-weight: 600; font-size: 13px; padding: 8px; border-radius: 10px; }
+@media (hover: hover) { .goal-set:hover { color: var(--ink); border-color: var(--muted); } }
+.goal { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.goal-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
+.goal-head b { color: var(--ink); font-family: var(--font-num); }
+.goal-edit-btn { padding: 2px 10px; font-size: 12px; }
+.goal-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.goal-bar span { display: block; height: 100%; border-radius: 3px; background: var(--ready); transition: width 300ms ease; }
+.goal-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.goal-stats b { color: var(--ink); font-family: var(--font-num); font-weight: 500; }
+.goal-edit { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.goal-edit label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.goal-edit input { width: 5.5em; padding: 6px 8px; font: 500 15px var(--font-num); }
+.goal-actions { display: flex; gap: 6px; }
+.shortcuts kbd { font-size: 11px; }
+/* Phones (touch, or the phone layout's width) have no keyboard to use them with. */
+@media (hover: none), (pointer: coarse), (max-width: 620px) { .setting-row.shortcuts, .delete-confirm kbd { display: none; } }
+/* "Delete 12.34?" under the timer, in place of the solve's buttons */
+.delete-confirm { display: flex; align-items: center; gap: 8px; font-size: 14px; animation: fade-in 140ms ease-out; }
+.delete-confirm > span { font-weight: 600; margin-right: 2px; }
+.delete-confirm button { display: inline-flex; align-items: center; gap: 6px; }
+.delete-confirm kbd { font-size: 10px; opacity: 0.7; }
+/* A setting that depends on another one that's off (inspection calls without inspection). */
+.setting-row.off { cursor: default; }
+.setting-row.off > span, .setting-row.off input.switch { opacity: 0.45; }
+.setting-row.off input.switch { cursor: default; }

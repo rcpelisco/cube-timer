@@ -9,6 +9,8 @@ import type { Solve } from "../lib/stats";
 import { exportCsTimer, type ImportResult } from "../lib/csTimer";
 import { exportFileName, saveTextFile } from "../lib/saveFile";
 import { ImportCsTimer } from "./ImportCsTimer";
+import { useBoolPref } from "../lib/boolPref";
+import { inspectionCallsPref } from "../lib/inspectionCalls";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
 
 // Settings: timer options, algorithms, sessions (with Copy times / Clear solves on the current
@@ -24,6 +26,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   const name = user?.displayName || user?.email || "Signed in";
   const [hideTime, setHideTime] = useHideTime();
   const [showTriggers, setShowTriggers] = useShowTriggers();
+  const [calls, setCalls] = useBoolPref(inspectionCallsPref);
 
   return (
     <section className="settings">
@@ -38,6 +41,14 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           <input type="checkbox" className="switch" id="opt-inspect-settings" checked={inspection}
             onChange={e => onInspection(e.target.checked)} />
         </label>
+        <label className={`setting-row${inspection ? "" : " off"}`} htmlFor="opt-calls">
+          <span>
+            <b>Inspection calls</b>
+            <small>Says "eight seconds" and "twelve seconds" during inspection, like a WCA judge.{!inspection && " Turn on 15 s inspection to use it."}</small>
+          </span>
+          <input type="checkbox" className="switch" id="opt-calls" checked={calls} disabled={!inspection}
+            onChange={e => setCalls(e.target.checked)} />
+        </label>
         <label className="setting-row" htmlFor="opt-hide-time">
           <span>
             <b>Hide time while solving</b>
@@ -46,6 +57,12 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           <input type="checkbox" className="switch" id="opt-hide-time" checked={hideTime}
             onChange={e => setHideTime(e.target.checked)} />
         </label>
+        <div className="setting-row shortcuts">
+          <span>
+            <b>Keyboard shortcuts</b>
+            <small>For your last solve: <kbd>2</kbd> +2 · <kbd>D</kbd> DNF · <kbd>N</kbd> note · <kbd>Backspace</kbd> delete, then <kbd>Enter</kbd> to confirm.</small>
+          </span>
+        </div>
       </div>
 
       <div className="panel settings-group">

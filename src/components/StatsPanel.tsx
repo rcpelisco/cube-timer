@@ -1,5 +1,5 @@
-import { memo, useMemo, useState } from "react";
-import { averageWindow, avgOf, bestRolling, bestSingle, DNF, eff, fmt, meanOf, type Solve, type Stat } from "../lib/stats";
+import { memo, useMemo, useState, type FormEvent } from "react";
+import { averageWindow, avgOf, bestRolling, bestSingle, DNF, eff, fmt, meanOf, rolling, type Solve, type Stat } from "../lib/stats";
 import { CubeGlyph } from "./SessionPicker";
 import { AverageDetail } from "./AverageDetail";
 
@@ -11,7 +11,9 @@ const ROWS: [string, Stat | null, number][] = [
 type Open = { row: number; which: "current" | "best"; el: HTMLElement };
 
 // memo: the timer re-renders the app every frame while it runs; this only needs to when the solves change.
-export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle }: { solves: Solve[]; cube?: string; puzzle: string }) {
+export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, goal, onGoal }: {
+  solves: Solve[]; cube?: string; puzzle: string; goal?: number; onGoal?: (goal: number | null) => void;
+}) {
   const [open, setOpen] = useState<Open | null>(null);
   const { okCount, mean, values } = useMemo(() => {
     let okCount = 0, sum = 0;
@@ -58,9 +60,84 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle }: { s
         <span>Solves <b>{okCount === solves.length ? solves.length : `${okCount}/${solves.length}`}</b></span>
         <span>Mean <b>{fmt(mean)}</b></span>
       </div>
+      {onGoal && <Goal solves={solves} goal={goal} onGoal={onGoal} />}
       {open && win && openRow && (
         <AverageDetail label={openRow[0]} which={open.which} win={win} origin={open.el} onClose={() => setOpen(null)} />
       )}
     </div>
   );
 });
+
+// "12" for 12000 ms, "12.5" for 12500, "1:05" for 65000.
+const goalText = (ms: number) => fmt(ms).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+
+// Seconds ("12", "12.5") or minutes and seconds ("1:05") to ms; null if it isn't a usable time.
+function parseGoal(text: string): number | null {
+  const m = text.trim().replace(",", ".").match(/^(?:(\d+):)?(\d+(?:\.\d*)?)$/);
+  if (!m) return null;
+  const ms = Math.round(((m[1] ? Number(m[1]) * 60 : 0) + Number(m[2])) * 1000);
+  return ms > 0 && ms < 3_600_000 ? ms : null;
+}
+
+const pct = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0);
+
+// A sub-X target for the session: how often solves and Ao5s beat it, with the last 100 solves
+// as a bar so progress shows.
+function Goal({ solves, goal, onGoal }: { solves: Solve[]; goal?: number; onGoal: (goal: number | null) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const parsed = parseGoal(draft);
+
+  const stats = useMemo(() => {
+    if (!goal) return null;
+    const under = (v: number | null) => v != null && v < goal;
+    const recent = solves.slice(-100);
+    const ao5s = rolling(solves, avgOf, 5).filter(v => v != null);
+    return {
+      recent: pct(recent.filter(s => under(eff(s))).length, recent.length), recentCount: recent.length,
+      all: pct(solves.filter(s => under(eff(s))).length, solves.length),
+      ao5: ao5s.length ? pct(ao5s.filter(under).length, ao5s.length) : null,
+    };
+  }, [solves, goal]);
+
+  const startEdit = () => { setDraft(goal ? goalText(goal) : ""); setEditing(true); };
+  const save = (e: FormEvent) => { e.preventDefault(); if (parsed) { onGoal(parsed); setEditing(false); } };
+
+  if (editing) {
+    return (
+      <form className="goal goal-edit" onSubmit={save}>
+        <label>
+          <span>Sub</span>
+          <input type="text" inputMode="decimal" value={draft} autoFocus placeholder="12" aria-label="Goal time in seconds"
+            onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); setEditing(false); } }} />
+          <span>s</span>
+        </label>
+        <div className="goal-actions">
+          {goal && <button type="button" className="danger" onClick={() => { onGoal(null); setEditing(false); }}>Remove</button>}
+          <button type="button" onClick={() => setEditing(false)}>Cancel</button>
+          <button type="submit" className="on" disabled={!parsed}>Save</button>
+        </div>
+      </form>
+    );
+  }
+  if (!goal || !stats) {
+    return <button type="button" className="goal-set" onClick={startEdit}>+ Set a goal, like sub-12</button>;
+  }
+  return (
+    <div className="goal">
+      <div className="goal-head">
+        <span>Goal · <b>sub-{goalText(goal)}</b></span>
+        <button type="button" className="goal-edit-btn" onClick={startEdit}>Edit</button>
+      </div>
+      <div className="goal-bar" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={stats.recent}
+        aria-label={`Last ${stats.recentCount} solves under the goal`}>
+        <span style={{ width: `${stats.recent}%` }} />
+      </div>
+      <div className="goal-stats">
+        <span>Last {stats.recentCount} <b>{stats.recent}%</b></span>
+        <span>All solves <b>{stats.all}%</b></span>
+        {stats.ao5 != null && <span>Ao5s <b>{stats.ao5}%</b></span>}
+      </div>
+    </div>
+  );
+}

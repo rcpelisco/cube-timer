@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { newSession, withCube, type Session } from "../lib/sessions";
+import { newSession, withCube, withGoal, type Session } from "../lib/sessions";
 import { toPuzzle, type PuzzleId } from "../lib/puzzles";
 import type { Solve } from "../lib/stats";
 
@@ -34,6 +34,10 @@ export function useSessions(initial: { sessions: Session[]; currentId: string })
       : s)));
   }, []);
 
+  const setGoal = useCallback((sid: string, goal: number | null) => {
+    setSessionsRaw(list => list.map(s => (s.id === sid ? withGoal(s, goal) : s)));
+  }, []);
+
   const remove = useCallback((sid: string) => {
     setSessionsRaw(list => {
       if (list.length <= 1) return list;
@@ -44,5 +48,5 @@ export function useSessions(initial: { sessions: Session[]; currentId: string })
     });
   }, [id]);
 
-  return { sessions, current, setSessions, setSolves, select: setCurrentId, create, update, remove };
+  return { sessions, current, setSessions, setSolves, select: setCurrentId, create, update, remove, setGoal };
 }
