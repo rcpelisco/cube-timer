@@ -492,7 +492,7 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before {
 /* ---------- Phones: bottom tab bar layout ---------- */
 .tabbar {
   position: relative; flex: none; z-index: 30;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   border-top: 1px solid var(--line);
