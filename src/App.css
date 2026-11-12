@@ -717,3 +717,8 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .import-result ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; }
 .import-result .muted { color: var(--muted); }
 .import-error { max-width: none; margin: 0; }
+
+/* Sessions section in Settings: same list as the header menu, without the menu's height cap. */
+.session-settings { gap: 6px; }
+.session-settings .session-list { max-height: none; }
+.session-settings .session-new { padding-top: 10px; }

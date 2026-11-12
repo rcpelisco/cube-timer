@@ -120,14 +120,16 @@ export default function App() {
   const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} />;
   const solveList = <SolveList key={current.id} solves={solves} onPenalty={setPenalty} onDelete={deleteSolve} />;
 
+  const sessionProps = {
+    list: sessions.sessions, currentId: current.id, onSelect: sessions.select,
+    onCreate: sessions.create, onUpdate: sessions.update, onDelete: sessions.remove,
+  };
+
   const page = (
     <div className={`app${isPhone ? " phone" : ""}`}>
       <Header
         phone={isPhone}
-        sessions={{
-          list: sessions.sessions, currentId: current.id, onSelect: sessions.select,
-          onCreate: sessions.create, onUpdate: sessions.update, onDelete: sessions.remove,
-        }}
+        sessions={sessionProps}
         account={account}
         view={view}
         onView={setView}
@@ -136,7 +138,7 @@ export default function App() {
       {view === "algs" && <AlgorithmsPage prefs={algPrefs} onTrain={() => setView("train")} />}
       {view === "train" && <TrainerPage prefs={algPrefs} />}
       {view === "settings" && (
-        <SettingsPage inspection={inspection} onInspection={setInspection} account={account} onImport={importFile}
+        <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
           solveActions={isPhone ? undefined : { solves, onClear: () => setSolves(() => []), session: current.name }} />
       )}
 

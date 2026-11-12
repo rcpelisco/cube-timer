@@ -10,6 +10,7 @@ import type { Solve } from "../lib/stats";
 import { useWakeLockStatus } from "../lib/wakeLockStatus";
 import type { ImportResult } from "../lib/csTimer";
 import { ImportCsTimer } from "./ImportCsTimer";
+import { SessionManager, type SessionPickerProps } from "./SessionPicker";
 
 // SHA-256 of the developer's email, so the debug card shows only for them without the address
 // itself being in the code or the public bundle.
@@ -51,8 +52,8 @@ function WakeLockDiagnostics() {
 // Settings: timer options, algorithms, appearance, and your Google account / sync. Phones reach it
 // from the tab bar; computers from the account menu (or the cog when signed out), and there it
 // also holds Copy times / Clear solves, which phones have on the Solves tab.
-export function SettingsPage({ inspection, onInspection, account, solveActions, onImport }: {
-  inspection: boolean; onInspection: (v: boolean) => void; account: AccountProps;
+export function SettingsPage({ inspection, onInspection, account, sessions, solveActions, onImport }: {
+  inspection: boolean; onInspection: (v: boolean) => void; account: AccountProps; sessions: SessionPickerProps;
   solveActions?: { solves: Solve[]; onClear: () => void; session: string };
   onImport: (text: string) => ImportResult;
 }) {
@@ -83,6 +84,11 @@ export function SettingsPage({ inspection, onInspection, account, solveActions, 
           <input type="checkbox" className="switch" id="opt-hide-time" checked={hideTime}
             onChange={e => setHideTime(e.target.checked)} />
         </label>
+      </div>
+
+      <div className="panel settings-group session-settings">
+        <h2>Sessions</h2>
+        <SessionManager {...sessions} />
       </div>
 
       {solveActions && (

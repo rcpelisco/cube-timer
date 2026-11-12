@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { knownCubes, nextName, type Session } from "../lib/sessions";
 import { PUZZLE_ORDER, PUZZLES, toPuzzle, type PuzzleId } from "../lib/puzzles";
 import type { SessionFields } from "../hooks/useSessions";
@@ -16,33 +16,21 @@ export interface SessionPickerProps {
 const MAX_NAME = 40;
 const CUBE_LIST_ID = "cube-suggestions";
 
-export function SessionPicker({ list, currentId, onSelect, onCreate, onUpdate, onDelete }: SessionPickerProps) {
+// Header button that opens the sessions menu.
+export function SessionPicker(props: SessionPickerProps) {
+  const { list, currentId } = props;
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [draftCube, setDraftCube] = useState("");
-  const [draftPuzzle, setDraftPuzzle] = useState<PuzzleId | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const current = list.find(s => s.id === currentId) ?? list[0];
-  const cubes = knownCubes(list);
-  // New sessions default to the puzzle you're on.
-  const newPuzzle = draftPuzzle ?? toPuzzle(current.puzzle);
 
   useEffect(() => {
-    if (!open) { setEditing(null); setConfirming(null); setDraft(""); setDraftCube(""); setDraftPuzzle(null); return; }
+    if (!open) return;
     const outside = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", esc); };
   }, [open]);
-
-  const create = (e: FormEvent) => {
-    e.preventDefault();
-    onCreate({ name: draft.trim().slice(0, MAX_NAME) || nextName(list), cube: draftCube.slice(0, MAX_NAME), puzzle: newPuzzle });
-    setOpen(false);
-  };
 
   return (
     <div className="session-picker" ref={ref}>
@@ -57,14 +45,44 @@ export function SessionPicker({ list, currentId, onSelect, onCreate, onUpdate, o
       {open && (
         <div className="session-menu">
           <div className="session-menu-head">Sessions</div>
-          <datalist id={CUBE_LIST_ID}>{cubes.map(c => <option key={c} value={c} />)}</datalist>
+          <SessionManager {...props} onDone={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The session list (switch, edit, delete) and the new-session form. Used in the header menu and
+// on the Settings page; onDone runs after switching or creating (the menu closes then).
+export function SessionManager({ list, currentId, onSelect, onCreate, onUpdate, onDelete, onDone }: SessionPickerProps & { onDone?: () => void }) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [draftCube, setDraftCube] = useState("");
+  const [draftPuzzle, setDraftPuzzle] = useState<PuzzleId | null>(null);
+  const cubeListId = CUBE_LIST_ID + useId();
+  const current = list.find(s => s.id === currentId) ?? list[0];
+  const cubes = knownCubes(list);
+  // New sessions default to the puzzle you're on.
+  const newPuzzle = draftPuzzle ?? toPuzzle(current.puzzle);
+
+  const create = (e: FormEvent) => {
+    e.preventDefault();
+    onCreate({ name: draft.trim().slice(0, MAX_NAME) || nextName(list), cube: draftCube.slice(0, MAX_NAME), puzzle: newPuzzle });
+    setDraft(""); setDraftCube(""); setDraftPuzzle(null);
+    onDone?.();
+  };
+
+  return (
+        <>
+          <datalist id={cubeListId}>{cubes.map(c => <option key={c} value={c} />)}</datalist>
           <ul className="session-list">
             {list.map(s => {
               const ao5 = avgOf(s.solves, 5);
               return (
                 <li key={s.id} className={s.id === current.id ? "current" : ""}>
                   {editing === s.id ? (
-                    <EditForm session={s} onCancel={() => setEditing(null)}
+                    <EditForm session={s} cubeListId={cubeListId} onCancel={() => setEditing(null)}
                       onSave={f => { onUpdate(s.id, { ...f, name: f.name || s.name }); setEditing(null); }} />
                   ) : confirming === s.id ? (
                     <div className="session-confirm">
@@ -76,7 +94,8 @@ export function SessionPicker({ list, currentId, onSelect, onCreate, onUpdate, o
                     </div>
                   ) : (
                     <>
-                      <button type="button" className="session-row" onClick={() => { onSelect(s.id); setOpen(false); }}>
+                      <button type="button" className="session-row" aria-current={s.id === current.id ? "true" : undefined}
+                        onClick={() => { onSelect(s.id); onDone?.(); }}>
                         <span className="session-name"><PuzzleBadge puzzle={toPuzzle(s.puzzle)} /> {s.name}</span>
                         {s.cube && <span className="session-cube"><CubeGlyph /> {s.cube}</span>}
                         <span className="session-meta">
@@ -100,20 +119,18 @@ export function SessionPicker({ list, currentId, onSelect, onCreate, onUpdate, o
           <form className="session-new" onSubmit={create}>
             <div className="session-fields">
               <PuzzleChoice value={newPuzzle} onChange={setDraftPuzzle} />
-              <input id="new-session-name" type="text" value={draft} maxLength={MAX_NAME} placeholder={nextName(list)}
+              <input type="text" value={draft} maxLength={MAX_NAME} placeholder={nextName(list)}
                 aria-label="New session name" onChange={e => setDraft(e.target.value)} />
-              <input id="new-session-cube" type="text" value={draftCube} maxLength={MAX_NAME} placeholder="Cube (optional)"
-                list={CUBE_LIST_ID} aria-label="Cube used in the new session" autoComplete="off" onChange={e => setDraftCube(e.target.value)} />
+              <input type="text" value={draftCube} maxLength={MAX_NAME} placeholder="Cube (optional)"
+                list={cubeListId} aria-label="Cube used in the new session" autoComplete="off" onChange={e => setDraftCube(e.target.value)} />
             </div>
             <button type="submit">New session</button>
           </form>
-        </div>
-      )}
-    </div>
+        </>
   );
 }
 
-function EditForm({ session, onSave, onCancel }: { session: Session; onSave: (fields: SessionFields) => void; onCancel: () => void }) {
+function EditForm({ session, cubeListId, onSave, onCancel }: { session: Session; cubeListId: string; onSave: (fields: SessionFields) => void; onCancel: () => void }) {
   const [name, setName] = useState(session.name);
   const [cube, setCube] = useState(session.cube ?? "");
   const [puzzle, setPuzzle] = useState(toPuzzle(session.puzzle));
@@ -129,7 +146,7 @@ function EditForm({ session, onSave, onCancel }: { session: Session; onSave: (fi
         {locked && <span className="session-note">The puzzle can't change once a session has solves.</span>}
         <input ref={input} type="text" value={name} maxLength={MAX_NAME} aria-label="Session name"
           onChange={e => setName(e.target.value)} onKeyDown={esc} />
-        <input type="text" value={cube} maxLength={MAX_NAME} placeholder="Cube (optional)" list={CUBE_LIST_ID}
+        <input type="text" value={cube} maxLength={MAX_NAME} placeholder="Cube (optional)" list={cubeListId}
           aria-label="Cube used in this session" autoComplete="off" onChange={e => setCube(e.target.value)} onKeyDown={esc} />
       </div>
       <div className="session-confirm-actions">
