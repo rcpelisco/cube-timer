@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { bestRolling, DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
 import { FORMATS, limitPenalty, moveOldRounds, pastRounds, roundStatus, toRecord, useMockComp } from "./lib/mockComp";
 import { fireConfetti } from "./lib/confetti";
@@ -18,7 +18,6 @@ import { useTimerBgLayer } from "./hooks/useTimerBg";
 import { useView } from "./hooks/useView";
 import { usePageTransition } from "./hooks/usePageTransition";
 import { useAlgPrefs } from "./hooks/useAlgPrefs";
-import { AlgorithmsPage } from "./components/AlgorithmsPage";
 import { useAuth } from "./hooks/useAuth";
 import { useCloudSync } from "./hooks/useCloudSync";
 import { Header } from "./components/Header";
@@ -37,13 +36,27 @@ import { StatsHero } from "./components/StatsHero";
 import { QuickStats } from "./components/QuickStats";
 import { TodayRing } from "./components/TodayRing";
 import { SplitsBadge } from "./components/SplitsBadge";
-import { TrainerPage } from "./components/TrainerPage";
 import { TimeDisplay } from "./components/TimeDisplay";
 import { InspectRing } from "./components/InspectRing";
 import { MockCompBar, MockCompHistory, MockCompResult, MockCompSetup } from "./components/MockComp";
-import { SettingsPage } from "./components/SettingsPage";
 import { SolveActions } from "./components/SolveActions";
 import "./App.css";
+
+// Pages other than the timer load on demand, so a cold start only downloads the timer. They're
+// fetched in the background once the app is idle, so switching to one is still instant.
+const loadAlgs = () => import("./components/AlgorithmsPage");
+const loadTrainer = () => import("./components/TrainerPage");
+const loadSettings = () => import("./components/SettingsPage");
+const AlgorithmsPage = lazy(() => loadAlgs().then(m => ({ default: m.AlgorithmsPage })));
+const TrainerPage = lazy(() => loadTrainer().then(m => ({ default: m.TrainerPage })));
+const SettingsPage = lazy(() => loadSettings().then(m => ({ default: m.SettingsPage })));
+if (typeof window !== "undefined") {
+  const prefetch = () => { loadAlgs(); loadTrainer(); loadSettings(); };
+  window.addEventListener("load", () => {
+    if (typeof requestIdleCallback === "function") requestIdleCallback(prefetch, { timeout: 4000 });
+    else setTimeout(prefetch, 2000);
+  }, { once: true });
+}
 
 const loaded = load();
 // Mock rounds used to be kept apart from the sessions; they move onto them once.
@@ -284,12 +297,14 @@ export default function App() {
         onView={setView}
       />
 
-      {view === "algs" && <AlgorithmsPage prefs={algPrefs} />}
-      {view === "train" && <TrainerPage prefs={algPrefs} />}
-      {view === "settings" && (
-        <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
-          solveActions={{ solves, onClear: () => setSolves(() => []) }} />
-      )}
+      <Suspense fallback={null}>
+        {view === "algs" && <AlgorithmsPage prefs={algPrefs} />}
+        {view === "train" && <TrainerPage prefs={algPrefs} />}
+        {view === "settings" && (
+          <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
+            solveActions={{ solves, onClear: () => setSolves(() => []) }} />
+        )}
+      </Suspense>
 
       {/* The timer page stays mounted (hidden) on other pages so its state and scramble keep. */}
       <section className="main" hidden={!showTimer}>
