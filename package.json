@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "check:algs": "node scripts/check-algs.ts",
+    "test:rules": "npx firebase-tools@14.9.0 emulators:exec --only firestore --project demo-cube-timer \"node scripts/test-rules.ts\"",
     "deploy": "npm run check:algs && npm run lint && npm run build && npx firebase-tools@14.9.0 deploy --only hosting,firestore:rules"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
+    "@firebase/rules-unit-testing": "^4.0.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vite-pwa/assets-generator": "^1.0.0",

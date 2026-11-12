@@ -1,10 +1,79 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each signed-in user can read and write only their own data: users/{uid} and the sessions
-    // and chunks of solves under it (see src/lib/cloudDocs.ts).
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // Each signed-in user can read and write only their own data, and only in the shapes the app
+    // writes (see src/lib/cloudDocs.ts):
+    //
+    //   users/{uid}                 { layout, inspection, algs, order, updatedAt }
+    //   users/{uid}/sessions/{id}   { name, createdAt, chunks, puzzle?, cube?, goal?, rounds? }
+    //   users/{uid}/chunks/{id}_{k} { sid, k, solves: [ up to 1000 solves ] }
+    //
+    // Anything else (other fields, other collections, oversized lists) is refused, so an account
+    // can't be used to dump arbitrary data. The limits sit well above what the app writes.
+
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function optStr(d, k, max) { return !(k in d) || (d[k] is string && d[k].size() <= max); }
+    function optNum(d, k) { return !(k in d) || d[k] is number; }
+    function optList(d, k, max) { return !(k in d) || (d[k] is list && d[k].size() <= max); }
+    function optMap(d, k, max) { return !(k in d) || (d[k] is map && d[k].size() <= max); }
+
+    function validAlgs(a) {
+      return a is map
+        && a.keys().hasOnly(['statuses', 'choices', 'cross', 'updatedAt'])
+        && optMap(a, 'statuses', 1000)
+        && optMap(a, 'choices', 1000)
+        && optStr(a, 'cross', 20)
+        && optNum(a, 'updatedAt');
+    }
+
+    // 'sessions' is the old single-document layout, which copies of the app from before
+    // 2026-11-12 still write; it can go once every device has updated.
+    function validUser(d) {
+      return d.keys().hasOnly(['layout', 'inspection', 'algs', 'order', 'updatedAt', 'sessions'])
+        && (!('layout' in d) || d.layout == 2)
+        && (!('inspection' in d) || d.inspection is bool)
+        && (!('algs' in d) || validAlgs(d.algs))
+        && optList(d, 'order', 500)
+        && optList(d, 'sessions', 500)
+        && (!('updatedAt' in d) || d.updatedAt == request.time);
+    }
+
+    // Names are capped at 40 characters in the app, but csTimer imports keep their own.
+    function validSession(id, d) {
+      return id.matches('[A-Za-z0-9_-]{1,64}')
+        && d.keys().hasOnly(['name', 'createdAt', 'chunks', 'puzzle', 'cube', 'goal', 'rounds'])
+        && d.name is string && d.name.size() <= 200
+        && d.createdAt is number
+        && d.chunks is int && d.chunks >= 0 && d.chunks <= 1000
+        && optStr(d, 'puzzle', 10)
+        && optStr(d, 'cube', 100)
+        && optNum(d, 'goal')
+        && optList(d, 'rounds', 1000);
+    }
+
+    // A chunk's id must be its session id and number, so each session has at most 1000 chunks.
+    function validChunk(id, d) {
+      return d.keys().hasOnly(['sid', 'k', 'solves'])
+        && d.sid is string && d.sid.matches('[A-Za-z0-9_-]{1,64}')
+        && d.k is int && d.k >= 0 && d.k < 1000
+        && id == d.sid + '_' + string(d.k)
+        && d.solves is list && d.solves.size() <= 1000;
+    }
+
+    match /users/{uid} {
+      allow read, delete: if owner(uid);
+      allow create, update: if owner(uid) && validUser(request.resource.data);
+
+      match /sessions/{id} {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid) && validSession(id, request.resource.data);
+      }
+      match /chunks/{id} {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid) && validChunk(id, request.resource.data);
+      }
     }
   }
 }
