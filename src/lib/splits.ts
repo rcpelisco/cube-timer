@@ -92,3 +92,14 @@ export function setPhases(puzzle: PuzzleId, names: string[]) {
 export function usePhases(puzzle: PuzzleId): string[] {
   return useSyncExternalStore(subscribe, () => get()[puzzle] ?? NONE);
 }
+
+// The puzzles that have split timing on (for the Settings switcher).
+const listOn = (c: Config) => (Object.keys(c) as PuzzleId[]).filter(p => (c[p]?.length ?? 0) > 0);
+let onCache: { config: Config; list: PuzzleId[] } | null = null;
+export function useSplitPuzzles(): PuzzleId[] {
+  return useSyncExternalStore(subscribe, () => {
+    const config = get();
+    if (onCache?.config !== config) onCache = { config, list: listOn(config) };
+    return onCache.list;
+  });
+}

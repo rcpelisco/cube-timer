@@ -1,9 +1,13 @@
-import { MAX_NAME, MAX_PHASES, MIN_PHASES, PHASE_PRESETS, setPhases, usePhases } from "../lib/splits";
-import { PUZZLES, type PuzzleId } from "../lib/puzzles";
+import { useState } from "react";
+import { MAX_NAME, MAX_PHASES, MIN_PHASES, PHASE_PRESETS, setPhases, usePhases, useSplitPuzzles } from "../lib/splits";
+import { PUZZLE_ORDER, PUZZLES, type PuzzleId } from "../lib/puzzles";
 
-// Split timing for the current session's puzzle: on or off, and the phases, which you name and
-// add or remove (2 to 6), or fill from a preset such as CFOP or Roux.
-export function SplitPhasesSetting({ puzzle }: { puzzle: PuzzleId }) {
+// Split timing, set per puzzle: on or off, and the phases, which you name and add or remove
+// (2 to 6), or fill from a preset such as CFOP or Roux. Opens on the current session's puzzle;
+// the switcher reaches the others (a dot marks the ones with split timing on).
+export function SplitPhasesSetting({ puzzle: sessionPuzzle }: { puzzle: PuzzleId }) {
+  const [puzzle, setPuzzle] = useState(sessionPuzzle);
+  const withSplits = useSplitPuzzles();
   const names = usePhases(puzzle);
   const on = names.length > 0;
   const presets = PHASE_PRESETS[puzzle];
@@ -13,10 +17,22 @@ export function SplitPhasesSetting({ puzzle }: { puzzle: PuzzleId }) {
 
   return (
     <div className="setting-row stacked split-setting">
+      <span>
+        <b>Split timing</b>
+        <small>Press during a solve to end each phase; the last press stops the timer. Each puzzle has its own phases.</small>
+      </span>
+      <div className="view-tabs split-puzzles" role="tablist" aria-label="Puzzle">
+        {PUZZLE_ORDER.map(p => (
+          <button key={p} type="button" role="tab" aria-selected={puzzle === p} className={puzzle === p ? "on" : ""}
+            aria-label={`${PUZZLES[p].label}${withSplits.includes(p) ? ", split timing on" : ""}`} onClick={() => setPuzzle(p)}>
+            {PUZZLES[p].label}{withSplits.includes(p) && <i className="split-dot" aria-hidden="true" />}
+          </button>
+        ))}
+      </div>
       <label className="split-setting-head" htmlFor="opt-splits">
         <span>
-          <b>Split timing · {label}</b>
-          <small>Press during a solve to end each phase; the last press stops the timer. Set separately for each puzzle.</small>
+          <b>Split {label} solves{puzzle === sessionPuzzle ? " (this session)" : ""}</b>
+          <small>{on ? `On: each solve is timed in ${names.length} phases.` : `Off: ${label} solves are timed in one piece.`}</small>
         </span>
         <input type="checkbox" className="switch" id="opt-splits" checked={on}
           onChange={e => set(e.target.checked ? (presets[0]?.names ?? ["Part 1", "Part 2"]) : [])} />

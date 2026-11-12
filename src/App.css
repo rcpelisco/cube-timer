@@ -1073,3 +1073,12 @@ body.solving .splits-badge { display: none; }
 .link-btn:disabled { color: var(--muted); text-decoration: none; }
 .ph-4 { background: color-mix(in srgb, var(--ink) 45%, var(--surface)); }
 .ph-5 { background: color-mix(in srgb, var(--ink) 25%, var(--surface)); }
+.split-puzzles { align-self: flex-start; margin-top: 10px; }
+.split-puzzles button { position: relative; padding: 5px 12px; font-size: 13px; }
+.split-dot { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--ready); }
+.split-setting .split-setting-head { margin-top: 10px; }
+.split-setting .split-setting-head b { font-size: 14px; }
+/* The row is a column here, so the stacked row's 260px basis would become height. */
+.setting-row.stacked.split-setting > span { flex: none; }
+/* A hairline between settings in a card. */
+.settings-group .setting-row + .setting-row { border-top: 1px solid var(--line); padding-top: 12px; }
