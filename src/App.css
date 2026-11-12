@@ -580,12 +580,15 @@ body.solving .tabbar { visibility: hidden; }
 .solves-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .solves-page .log { max-height: none; }
 
+/* Read by screen readers, not shown. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
 /* Phones: the headline numbers at the top of the Solves page. */
 .stats-hero { display: flex; align-items: stretch; gap: 16px; padding: 16px; }
 .hero-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .hero-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .hero-pb { font-size: 10px; letter-spacing: 0.04em; padding: 2px 5px; border-radius: 4px; background: var(--accent); color: var(--bg); }
-.hero-value { font: 500 44px/1.05 var(--font-num); letter-spacing: -0.02em; color: var(--ink); }
+.hero-value { display: block; width: fit-content; transform-origin: 0 50%; font: 500 44px/1.05 var(--font-num); letter-spacing: -0.02em; color: var(--ink); }
 .hero-delta { font-size: 13px; color: var(--muted); font-family: var(--font-num); }
 .hero-delta span { font-family: var(--font-ui); }
 .hero-delta.down { color: var(--ready); }
@@ -594,6 +597,7 @@ body.solving .tabbar { visibility: hidden; }
 .hero-side div { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
 .hero-side dt { font-size: 12px; color: var(--muted); }
 .hero-side dd { margin: 0; font: 500 15px var(--font-num); color: var(--ink); }
+.hero-side dd b { font-weight: inherit; display: inline-block; transform-origin: 100% 50%; }
 
 /* Settings tab */
 .settings { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
