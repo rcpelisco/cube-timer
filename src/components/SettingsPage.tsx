@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { GoogleMark, type AccountProps } from "./AccountButton";
 import { SYNC_LABEL } from "../hooks/useCloudSync";
 import { ThemeChoice } from "./ThemeButton";
@@ -6,6 +7,44 @@ import { useHideTime } from "../hooks/useHideTime";
 import { useShowTriggers } from "../hooks/useShowTriggers";
 import { SolveActions } from "./SolveActions";
 import type { Solve } from "../lib/stats";
+import { useWakeLockStatus } from "../lib/wakeLockStatus";
+
+// SHA-256 of the developer's email, so the debug card shows only for them without the address
+// itself being in the code or the public bundle.
+const DEV_EMAIL_SHA256 = "7dd4e4d5760fd0a5bfc0933390232211c1601a882323afe945b51fba8ee95678";
+
+function useIsDev(email: string | null | undefined) {
+  const [dev, setDev] = useState(false);
+  useEffect(() => {
+    let live = true;
+    if (!email || !crypto.subtle) { setDev(false); return; }
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(email.trim().toLowerCase())).then(buf => {
+      const hex = Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, "0")).join("");
+      if (live) setDev(hex === DEV_EMAIL_SHA256);
+    });
+    return () => { live = false; };
+  }, [email]);
+  return dev;
+}
+
+// Temporary: shows what the screen wake lock is doing, to debug the screen sleeping on iOS.
+function WakeLockDiagnostics() {
+  const s = useWakeLockStatus();
+  const standalone = matchMedia("(display-mode: standalone)").matches
+    || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  const build = new URL(import.meta.url).pathname.split("/").pop();
+  return (
+    <div className="panel settings-group">
+      <h2>Screen wake lock (debug)</h2>
+      <p className="setting-note wakelock-debug">
+        State: <b>{s.state}</b>{s.detail && <> · {s.detail}</>}<br />
+        Requests: {s.requests} · last change {new Date(s.at).toLocaleTimeString()}<br />
+        Home-screen app: {standalone ? "yes" : "no"} · secure: {window.isSecureContext ? "yes" : "no"}<br />
+        Build: {build}
+      </p>
+    </div>
+  );
+}
 
 // Settings: timer options, algorithms, appearance, and your Google account / sync. Phones reach it
 // from the tab bar; computers from the account menu (or the cog when signed out), and there it
@@ -18,6 +57,7 @@ export function SettingsPage({ inspection, onInspection, account, solveActions }
   const name = user?.displayName || user?.email || "Signed in";
   const [hideTime, setHideTime] = useHideTime();
   const [showTriggers, setShowTriggers] = useShowTriggers();
+  const isDev = useIsDev(user?.email);
 
   return (
     <section className="settings">
@@ -75,6 +115,8 @@ export function SettingsPage({ inspection, onInspection, account, solveActions }
         <ThemeChoice />
         <TimerBgSetting />
       </div>
+
+      {isDev && <WakeLockDiagnostics />}
 
       <div className="panel settings-group">
         <h2>Account</h2>

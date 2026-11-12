@@ -6,6 +6,7 @@ import {
   type RefObject,
 } from "react";
 import { DNF, fmt, type Penalty } from "../lib/stats";
+import { setWakeLockStatus } from "../lib/wakeLockStatus";
 
 // Stackmat-style timer: hold until ready (green), release to start, any key or tap to stop.
 // Optional WCA inspection: 15 s countdown, +2 after 15 s, DNF after 17 s.
@@ -278,32 +279,54 @@ export function useTimer({
 
 // Keep the screen on while the app is open (supported on iOS 16.4+ and recent Chrome).
 // The browser drops the lock whenever the page is hidden, so take it again on return.
+// iOS can refuse a request that isn't made from a tap (at launch, or after returning from the
+// home screen), so every tap or key press also retries while no lock is held.
 function useWakeLock(active: boolean) {
   useEffect(() => {
-    if (!active || !("wakeLock" in navigator)) return;
+    if (!active) return;
+    if (!("wakeLock" in navigator)) {
+      setWakeLockStatus({ state: "unsupported" });
+      return;
+    }
     let lock: WakeLockSentinel | null = null,
       pending = false,
-      disposed = false;
+      disposed = false,
+      requests = 0;
     const acquire = () => {
       if (disposed || pending || document.visibilityState !== "visible") return;
       if (lock && !lock.released) return;
       pending = true;
+      setWakeLockStatus({ state: "requesting", requests: ++requests });
       navigator.wakeLock
         .request("screen")
         .then((l) => {
-          if (disposed) l.release().catch(() => {});
-          else lock = l;
+          if (disposed) {
+            l.release().catch(() => {});
+            return;
+          }
+          lock = l;
+          setWakeLockStatus({ state: "held", detail: "" });
+          l.addEventListener("release", () => {
+            if (!disposed) setWakeLockStatus({ state: "released", detail: `page ${document.visibilityState}` });
+          });
         })
-        .catch(() => {})
+        .catch((e: unknown) => {
+          const err = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+          setWakeLockStatus({ state: "refused", detail: err });
+        })
         .finally(() => {
           pending = false;
         });
     };
     acquire();
     document.addEventListener("visibilitychange", acquire);
+    window.addEventListener("pointerdown", acquire, { capture: true, passive: true });
+    window.addEventListener("keydown", acquire, { capture: true, passive: true });
     return () => {
       disposed = true;
       document.removeEventListener("visibilitychange", acquire);
+      window.removeEventListener("pointerdown", acquire, { capture: true });
+      window.removeEventListener("keydown", acquire, { capture: true });
       lock?.release().catch(() => {});
     };
   }, [active]);
