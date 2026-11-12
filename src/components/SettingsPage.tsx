@@ -49,9 +49,9 @@ function WakeLockDiagnostics() {
   );
 }
 
-// Settings: timer options, algorithms, appearance, and your Google account / sync. Phones reach it
-// from the tab bar; computers from the account menu (or the cog when signed out), and there it
-// also holds Copy times / Clear solves, which phones have on the Solves tab.
+// Settings: timer options, sessions, Copy times / Clear solves, import, algorithms, appearance, and
+// your Google account / sync. Phones reach it from the tab bar (and also have Copy / Clear on the
+// Solves tab); computers from the account menu (or the cog when signed out).
 export function SettingsPage({ inspection, onInspection, account, sessions, solveActions, onImport }: {
   inspection: boolean; onInspection: (v: boolean) => void; account: AccountProps; sessions: SessionPickerProps;
   solveActions?: { solves: Solve[]; onClear: () => void; session: string };
