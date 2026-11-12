@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { SplitBars } from "./SplitsLine";
-import { phaseTimes } from "../lib/splits";
-import { avgOf, DNF, eff, fmt, MAX_NOTE, type Penalty, type Solve } from "../lib/stats";
+import { namesFor, phaseTimes, usePhases } from "../lib/splits";
+import { ShareCard } from "./ShareCard";
+import type { CardData } from "../lib/shareCard";
+import { avgOf, bestSingle, DNF, eff, fmt, MAX_NOTE, type Penalty, type Solve } from "../lib/stats";
 import { PUZZLES, type PuzzleId } from "../lib/puzzles";
 import { ScramblePreview } from "./ScramblePreview";
 import { useLeave } from "../hooks/useLeave";
@@ -12,8 +14,8 @@ import { useFlyIn } from "../hooks/useFlyIn";
 // a picture of the scrambled puzzle, and a note you can write.
 // focusNote: open with the cursor in the note (from the Note button under the timer).
 // origin: the tapped time in the solve list, which the big time flies up out of as this opens.
-export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, onNavigate, onClose, focusNote = false, origin }: {
-  solves: Solve[]; i: number; puzzle: PuzzleId; focusNote?: boolean; origin?: HTMLElement;
+export function SolveDetail({ solves, i, puzzle, cube, onPenalty, onDelete, onNote, onNavigate, onClose, focusNote = false, origin }: {
+  solves: Solve[]; i: number; puzzle: PuzzleId; cube?: string; focusNote?: boolean; origin?: HTMLElement;
   onPenalty: (i: number, pen: Penalty) => void; onDelete: (i: number) => void; onNote: (i: number, note: string) => void;
   onNavigate: (i: number) => void; onClose: () => void;
 }) {
@@ -26,10 +28,14 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
   const [firstI] = useState(i);
   const valueRef = useRef<HTMLDivElement>(null);
   const fly = useFlyIn(origin, valueRef, leaving || i !== firstI);
+  const [sharing, setSharing] = useState<CardData | null>(null);
+  const phaseNames = usePhases(puzzle);
 
   // Esc closes. Space and arrow keys don't reach the timer behind this view; in the note they
-  // still type and move the cursor. Left/right step to the previous/next solve.
+  // still type and move the cursor. Left/right step to the previous/next solve. While the share
+  // view is open over this one, it handles the keys.
   useEffect(() => {
+    if (sharing) return;
     const key = (e: KeyboardEvent) => {
       const typing = (e.target as Element | null)?.matches?.("textarea, input");
       if (e.key === "Escape") {
@@ -47,13 +53,27 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
     window.addEventListener("keydown", key, true);
     window.addEventListener("keyup", key, true);
     return () => { window.removeEventListener("keydown", key, true); window.removeEventListener("keyup", key, true); };
-  }, [i, solves.length, close, onNavigate]);
+  }, [i, solves.length, close, onNavigate, sharing]);
 
   if (!s) return null;
 
   const upTo = solves.slice(0, i + 1);
   const ao5 = avgOf(upTo, 5), ao12 = avgOf(upTo, 12);
   const time = s.pen === DNF ? "DNF" : fmt(eff(s));
+  const share = () => {
+    const best = s.pen !== DNF && bestSingle(solves) === eff(s);
+    const phases = s.sp?.length ? phaseTimes(s.sp, s.t) : null;
+    const names = phases ? namesFor(phases.length, phaseNames) : [];
+    setSharing({
+      kind: `${PUZZLES[puzzle].label} · Single`,
+      value: s.pen === 2 ? `${time}+` : time,
+      badge: best ? "Session best" : undefined,
+      times: phases?.map((t, k) => ({ text: `${names[k]} ${fmt(t)}` })),
+      note: s.scr || undefined,
+      date: new Date(s.at).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }),
+      cube,
+    });
+  };
   const when = new Date(s.at).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
   return createPortal(
@@ -70,6 +90,7 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
             </small>
           </div>
           <div className="avg-detail-actions">
+            <button type="button" onClick={share}>Share</button>
             <button type="button" className="overlay-close" aria-label="Previous solve" disabled={i === 0} onClick={() => onNavigate(i - 1)}>‹</button>
             <button type="button" className="overlay-close" aria-label="Next solve" disabled={i === solves.length - 1} onClick={() => onNavigate(i + 1)}>›</button>
             <button type="button" className="overlay-close" aria-label="Close" onClick={close}>✕</button>
@@ -113,6 +134,7 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
             onChange={e => onNote(i, e.target.value)} />
         </label>
       </div>
+      {sharing && <ShareCard data={sharing} onClose={() => setSharing(null)} />}
     </div>,
     document.body,
   );

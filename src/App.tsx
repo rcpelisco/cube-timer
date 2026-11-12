@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { bestRolling, DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
-import { FORMATS, limitPenalty, roundStatus, useMockComp } from "./lib/mockComp";
+import { FORMATS, limitPenalty, moveOldRounds, pastRounds, roundStatus, toRecord, useMockComp } from "./lib/mockComp";
 import { fireConfetti } from "./lib/confetti";
 import { load, save } from "./lib/storage";
 import { firebaseEnabled } from "./lib/firebase";
@@ -35,12 +35,14 @@ import { SplitsBadge } from "./components/SplitsBadge";
 import { TrainerPage } from "./components/TrainerPage";
 import { TimeDisplay } from "./components/TimeDisplay";
 import { InspectRing } from "./components/InspectRing";
-import { MockCompBar, MockCompResult, MockCompSetup } from "./components/MockComp";
+import { MockCompBar, MockCompHistory, MockCompResult, MockCompSetup } from "./components/MockComp";
 import { SettingsPage } from "./components/SettingsPage";
 import { SolveActions } from "./components/SolveActions";
 import "./App.css";
 
-const initial = load();
+const loaded = load();
+// Mock rounds used to be kept apart from the sessions; they move onto them once.
+const initial = { ...loaded, sessions: moveOldRounds(loaded.sessions) };
 const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
 
 export default function App() {
@@ -60,6 +62,7 @@ export default function App() {
   // inspection is on and each solve is one of its attempts.
   const comp = useMockComp();
   const [compSetup, setCompSetup] = useState(false);
+  const [compHistory, setCompHistory] = useState(false);
   const compRound = comp.round && comp.round.sid === current.id ? comp.round : null;
   const compStatus = useMemo(() => (compRound ? roundStatus(compRound, solves) : null), [compRound, solves]);
   const compLive = !!compRound && !!compStatus && !compStatus.done;
@@ -204,12 +207,13 @@ export default function App() {
     : timer.phase === "inspect" || !timerInspection ? <>{act} until green, release to start</>
     : isTouch ? "Tap to start inspection" : <>Press <kbd>Space</kbd> to start inspection</>;
 
-  // A finished round goes into the history (and is updated if a penalty changes its result).
-  const keepRound = comp.keep;
-  const puzzleLabel = PUZZLES[puzzle].label;
+  // A finished round is kept on its session; its result is worked out from the solves whenever
+  // it's shown, so a penalty given later still counts.
+  const keepRound = sessions.keepRound;
+  const compDone = !!compStatus?.done;
   useEffect(() => {
-    if (compRound && compStatus?.done) keepRound(compRound, compStatus, puzzleLabel);
-  }, [compRound, compStatus, keepRound, puzzleLabel]);
+    if (compRound && compDone) keepRound(compRound.sid, toRecord(compRound));
+  }, [compRound, compDone, keepRound]);
   const compBest = useMemo(() => {
     if (!compRound || !compStatus?.done) return null;
     const f = FORMATS[compRound.format];
@@ -233,7 +237,7 @@ export default function App() {
   const setSessionGoal = sessions.setGoal;
   const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);
   const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} puzzleId={puzzle} goal={current.goal} onGoal={setGoal} />;
-  const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote} />;
+  const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} cube={current.cube} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote} />;
 
   const sessionProps = {
     list: sessions.sessions, currentId: current.id, onSelect: sessions.select,
@@ -260,8 +264,9 @@ export default function App() {
       {/* The timer page stays mounted (hidden) on other pages so its state and scramble keep. */}
       <section className="main" hidden={!showTimer}>
         {compRound && compStatus && (compStatus.done
-          ? <MockCompResult round={compRound} status={compStatus} sessionBest={compBest}
-              onAgain={() => startRound(compRound.format, compRound.cutoff, compRound.limit)} onDone={comp.end} />
+          ? <MockCompResult round={compRound} status={compStatus} sessionBest={compBest} puzzle={puzzle} cube={current.cube}
+              onAgain={() => startRound(compRound.format, compRound.cutoff, compRound.limit)}
+              onHistory={() => setCompHistory(true)} onDone={comp.end} />
           : <MockCompBar round={compRound} status={compStatus} onEnd={comp.end} />)}
         {comp.round && !compRound && (
           <div className="panel comp-bar comp-elsewhere dimmable">
@@ -269,7 +274,9 @@ export default function App() {
             <button type="button" className="link-btn" onClick={comp.end}>End it</button>
           </div>
         )}
-        {compSetup && <MockCompSetup puzzle={puzzleLabel} history={comp.history} onStart={startRound} onClose={() => setCompSetup(false)} />}
+        {compSetup && <MockCompSetup puzzle={puzzle} past={pastRounds(sessions.sessions)} onStart={startRound}
+          onHistory={() => { setCompSetup(false); setCompHistory(true); }} onClose={() => setCompSetup(false)} />}
+        {compHistory && <MockCompHistory sessions={sessions.sessions} puzzle={puzzle} onDelete={sessions.removeRound} onClose={() => setCompHistory(false)} />}
         <div className="scramble dimmable">
           <div className="scramble-text">
             <span className="label">
@@ -322,7 +329,7 @@ export default function App() {
             </>}
           </div>
           {noteOpen && solves.length > 0 && (
-            <SolveDetail solves={solves} i={Math.min(noteAt ?? solves.length - 1, solves.length - 1)} puzzle={puzzle}
+            <SolveDetail solves={solves} i={Math.min(noteAt ?? solves.length - 1, solves.length - 1)} puzzle={puzzle} cube={current.cube}
               focusNote={noteAt == null} onPenalty={setPenalty} onNote={setNote}
               onDelete={j => { deleteSolve(j); closeNote(); }} onNavigate={setNoteAt} onClose={closeNote} />
           )}

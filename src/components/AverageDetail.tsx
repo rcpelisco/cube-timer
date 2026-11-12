@@ -4,6 +4,8 @@ import { DNF, eff, fmt, type Solve } from "../lib/stats";
 import type { AverageWindow } from "../lib/stats";
 import { useLeave } from "../hooks/useLeave";
 import { useFlyIn } from "../hooks/useFlyIn";
+import { ShareCard } from "./ShareCard";
+import type { CardData } from "../lib/shareCard";
 
 // A solve's time as listed in an average: "12.34", "14.34+" for +2, "DNF".
 const timeText = (s: Solve) => (s.pen === DNF ? "DNF" : `${fmt(eff(s))}${s.pen === 2 ? "+" : ""}`);
@@ -19,18 +21,23 @@ const dateText = (at: number) =>
 // trimmed average leaves out in brackets.
 // origin: the tapped value in Statistics. The big value flies up out of it as this opens; closing
 // is the usual slide down.
-export function AverageDetail({ label, which, win, origin, onClose }: {
-  label: string; which: "current" | "best"; win: AverageWindow; origin?: HTMLElement; onClose: () => void;
+export function AverageDetail({ label, which, win, origin, puzzle, cube, isBest, onClose }: {
+  label: string; which: "current" | "best"; win: AverageWindow; origin?: HTMLElement; puzzle?: string; cube?: string;
+  isBest?: boolean; // the session's best (a current average can be it too)
+  onClose: () => void;
 }) {
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [limit, setLimit] = useState(PAGE);
   const valueRef = useRef<HTMLDivElement>(null);
   const { leaving, close } = useLeave(onClose);
   const fly = useFlyIn(origin, valueRef, leaving);
+  const [sharing, setSharing] = useState<CardData | null>(null);
 
 
-  // Esc closes. Space is swallowed so it doesn't arm the timer behind this view.
+  // Esc closes. Space is swallowed so it doesn't arm the timer behind this view. While the share
+  // view is open over this one, it handles the keys.
   useEffect(() => {
+    if (sharing) return;
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); if (e.type === "keydown") close(); }
       else if (e.code === "Space") { e.preventDefault(); e.stopImmediatePropagation(); }
@@ -38,7 +45,7 @@ export function AverageDetail({ label, which, win, origin, onClose }: {
     window.addEventListener("keydown", key, true);
     window.addEventListener("keyup", key, true);
     return () => { window.removeEventListener("keydown", key, true); window.removeEventListener("keyup", key, true); };
-  }, [close]);
+  }, [close, sharing]);
 
   const shown = (s: Solve, i: number) => (win.trimmed.has(i) ? `(${timeText(s)})` : timeText(s));
   const first = win.solves[0].at, last = win.solves[win.solves.length - 1].at;
@@ -51,6 +58,22 @@ export function AverageDetail({ label, which, win, origin, onClose }: {
     const done = (msg: string) => { setCopyLabel(msg); setTimeout(() => setCopyLabel("Copy"), 1500); };
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => done("Copied"), () => done("Copy blocked"));
     else done("Copy blocked");
+  };
+
+  // Up to 12 solves go on the card one by one; a longer average gets a summary instead.
+  const share = () => {
+    const ok = win.solves.filter(s => s.pen !== DNF).map(eff);
+    setSharing({
+      kind: puzzle ? `${puzzle} · ${label}` : label,
+      value: fmt(win.value),
+      badge: which === "best" || isBest ? "Session best" : undefined,
+      times: win.solves.length <= 12 ? win.solves.map((s, i) => ({ text: timeText(s), dim: win.trimmed.has(i) })) : undefined,
+      note: win.solves.length > 12
+        ? `${win.solves.length} solves${ok.length ? ` · fastest ${fmt(Math.min(...ok))} · slowest ${fmt(Math.max(...ok))}` : ""}`
+        : undefined,
+      date: new Date(last).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }),
+      cube,
+    });
   };
 
   return createPortal(
@@ -68,6 +91,7 @@ export function AverageDetail({ label, which, win, origin, onClose }: {
             </small>
           </div>
           <div className="avg-detail-actions">
+            <button type="button" onClick={share}>Share</button>
             <button type="button" onClick={copy}>{copyLabel}</button>
             <button type="button" className="overlay-close" aria-label="Close" onClick={close}>✕</button>
           </div>
@@ -92,6 +116,7 @@ export function AverageDetail({ label, which, win, origin, onClose }: {
           </button>
         )}
       </div>
+      {sharing && <ShareCard data={sharing} onClose={() => setSharing(null)} />}
     </div>,
     document.body,
   );

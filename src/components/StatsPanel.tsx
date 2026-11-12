@@ -96,7 +96,8 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
       {onGoal && <Goal solves={solves} goal={goal} onGoal={onGoal} />}
       {pbsOpen && <PbHistory solves={solves} onClose={() => setPbsOpen(false)} />}
       {open && win && openRow && (
-        <AverageDetail label={openRow[0]} which={open.which} win={win} origin={open.el} onClose={() => setOpen(null)} />
+        <AverageDetail label={openRow[0]} which={open.which} win={win} origin={open.el} puzzle={puzzle} cube={cube}
+          isBest={(() => { const v = values[rows.indexOf(openRow)]; return v?.best != null && win.value === v.best; })()} onClose={() => setOpen(null)} />
       )}
     </div>
   );

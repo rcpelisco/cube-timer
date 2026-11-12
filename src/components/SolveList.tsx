@@ -26,8 +26,8 @@ const PAGE = 100;
 
 // Solves, newest first. Tap a row for the solve's details: scramble, picture, note.
 // memo: the timer re-renders the app every frame while it runs; this only needs to when the solves change.
-export const SolveList = memo(function SolveList({ solves, puzzle, onPenalty, onDelete, onNote }: Props & {
-  puzzle: PuzzleId; onNote: (i: number, note: string) => void;
+export const SolveList = memo(function SolveList({ solves, puzzle, cube, onPenalty, onDelete, onNote }: Props & {
+  puzzle: PuzzleId; cube?: string; onNote: (i: number, note: string) => void;
 }) {
   // The open solve, by position in the session, and the tapped time it flies up out of.
   const [open, setOpen] = useState<number | null>(null);
@@ -72,7 +72,7 @@ export const SolveList = memo(function SolveList({ solves, puzzle, onPenalty, on
         )}
       </div>
       {open != null && open < solves.length && (
-        <SolveDetail solves={solves} i={open} puzzle={puzzle} origin={origin} onPenalty={onPenalty} onNote={onNote}
+        <SolveDetail solves={solves} i={open} puzzle={puzzle} cube={cube} origin={origin} onPenalty={onPenalty} onNote={onNote}
           onDelete={j => { onDelete(j); setOpen(null); }} onNavigate={setOpen} onClose={close} />
       )}
     </div>

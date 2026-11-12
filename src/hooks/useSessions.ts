@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { newSession, withCube, withGoal, type Session } from "../lib/sessions";
+import { newSession, withCube, withGoal, withRound, withoutRound, type Session } from "../lib/sessions";
+import type { RoundRecord } from "../lib/mockComp";
 import { toPuzzle, type PuzzleId } from "../lib/puzzles";
 import type { Solve } from "../lib/stats";
 
@@ -38,6 +39,20 @@ export function useSessions(initial: { sessions: Session[]; currentId: string })
     setSessionsRaw(list => list.map(s => (s.id === sid ? withGoal(s, goal) : s)));
   }, []);
 
+  // Adds a finished mock round to its session (no change if it's already there as it is).
+  const keepRound = useCallback((sid: string, round: RoundRecord) => {
+    setSessionsRaw(list => {
+      const s = list.find(x => x.id === sid);
+      const had = s?.rounds?.find(r => r.startAt === round.startAt);
+      if (!s || (had && JSON.stringify(had) === JSON.stringify(round))) return list;
+      return list.map(x => (x === s ? withRound(x, round) : x));
+    });
+  }, []);
+
+  const removeRound = useCallback((sid: string, startAt: number) => {
+    setSessionsRaw(list => list.map(s => (s.id === sid ? withoutRound(s, startAt) : s)));
+  }, []);
+
   const remove = useCallback((sid: string) => {
     setSessionsRaw(list => {
       if (list.length <= 1) return list;
@@ -48,5 +63,5 @@ export function useSessions(initial: { sessions: Session[]; currentId: string })
     });
   }, [id]);
 
-  return { sessions, current, setSessions, setSolves, select: setCurrentId, create, update, remove, setGoal };
+  return { sessions, current, setSessions, setSolves, select: setCurrentId, create, update, remove, setGoal, keepRound, removeRound };
 }

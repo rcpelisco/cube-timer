@@ -1,5 +1,6 @@
 import type { Solve } from "./stats";
 import type { PuzzleId } from "./puzzles";
+import type { RoundRecord } from "./mockComp";
 
 // puzzle: which puzzle the session is for (scrambles and preview follow it); missing on
 // sessions from before puzzles existed, which are 3×3 (see toPuzzle).
@@ -9,6 +10,21 @@ export interface Session {
   id: string; name: string; createdAt: number; solves: Solve[]; puzzle?: PuzzleId; cube?: string;
   // A "sub-X" target in ms (e.g. 12000 for sub-12); left out when there is none.
   goal?: number;
+  // Finished mock competition rounds (lib/mockComp.ts), oldest first; left out when there are none.
+  rounds?: RoundRecord[];
+}
+
+// The session with the round added, or replacing the one that started at the same time.
+export function withRound(session: Session, round: RoundRecord): Session {
+  const rest = (session.rounds ?? []).filter(r => r.startAt !== round.startAt);
+  return { ...session, rounds: [...rest, round].sort((a, b) => a.startAt - b.startAt) };
+}
+
+export function withoutRound(session: Session, startAt: number): Session {
+  const rounds = (session.rounds ?? []).filter(r => r.startAt !== startAt);
+  const rest = { ...session };
+  delete rest.rounds;
+  return rounds.length ? { ...rest, rounds } : rest;
 }
 
 // The session with `goal` set, or removed for null.
@@ -54,7 +70,12 @@ export function mergeSessions(remote: Session[], local: Session[], since: number
     if (!l) return r;
     const known = new Set(r.solves.map(solveKey));
     const extra = l.solves.filter(s => !known.has(solveKey(s)) && s.at > since);
-    return extra.length ? { ...r, solves: [...r.solves, ...extra].sort((a, b) => a.at - b.at) } : r;
+    // Rounds the same way, except that all of this device's come along the first time any are
+    // synced (they were kept only on the device before).
+    const extraRounds = (l.rounds ?? []).filter(x => !r.rounds?.some(y => y.startAt === x.startAt) && (!r.rounds || x.startAt > since));
+    let m = extra.length ? { ...r, solves: [...r.solves, ...extra].sort((a, b) => a.at - b.at) } : r;
+    for (const x of extraRounds) m = withRound(m, x);
+    return m;
   });
   for (const l of local) {
     if (remote.some(r => r.id === l.id)) continue;
