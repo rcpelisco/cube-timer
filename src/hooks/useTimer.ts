@@ -23,6 +23,20 @@ export interface TimerView {
 
 const HOLD_MS = 300;
 
+// The running clock, outside React state: it changes every frame, and only TimeDisplay needs it,
+// so a solve redraws just the time rather than the whole app 60-120 times a second.
+let liveText = "0.00";
+const liveListeners = new Set<() => void>();
+export const liveTime = {
+  get: () => liveText,
+  subscribe(fn: () => void) { liveListeners.add(fn); return () => { liveListeners.delete(fn); }; },
+  set(text: string) {
+    if (text === liveText) return;
+    liveText = text;
+    liveListeners.forEach(fn => fn());
+  },
+};
+
 interface Options {
   stageRef: RefObject<HTMLElement | null>;
   inspection: boolean;
@@ -73,6 +87,8 @@ export function useTimer({
       marks: [] as number[],
       raf: 0,
       holdTimer: 0,
+      inspShown: "",
+      inspWarn: 0 as TimerView["warn"],
     };
     const sync = (patch: Partial<TimerView> = {}) =>
       setView((v) => ({
@@ -86,17 +102,21 @@ export function useTimer({
     const tick = () => {
       const now = performance.now();
       if (st.phase === "running") {
-        sync({ display: fmt(now - st.t0) });
+        liveTime.set(fmt(now - st.t0));
       } else if (st.phase === "inspect") {
         const el = now - st.inspStart;
         if (el >= 17000) {
           finish(0, DNF);
           return;
         }
-        sync({
-          display: el >= 15000 ? "+2" : String(15 - Math.floor(el / 1000)),
-          warn: el >= 12000 ? 12 : el >= 8000 ? 8 : 0,
-        });
+        // The countdown only changes once a second: re-render then, not every frame.
+        const display = el >= 15000 ? "+2" : String(15 - Math.floor(el / 1000));
+        const warn = el >= 12000 ? 12 : el >= 8000 ? 8 : 0;
+        if (display !== st.inspShown || warn !== st.inspWarn) {
+          st.inspShown = display;
+          st.inspWarn = warn;
+          sync({ display, warn });
+        }
       }
       st.raf = requestAnimationFrame(tick);
     };
@@ -117,6 +137,8 @@ export function useTimer({
     const startInspection = () => {
       st.phase = "inspect";
       st.inspStart = performance.now();
+      st.inspShown = "15";
+      st.inspWarn = 0;
       sync({ display: "15", warn: 0 });
       loop();
     };
@@ -129,6 +151,7 @@ export function useTimer({
       st.phase = "running";
       st.t0 = performance.now();
       st.marks = [];
+      liveTime.set("0.00");
       sync({ display: "0.00", warn: 0, marks: [] });
       loop();
     };
