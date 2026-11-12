@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { SplitBars } from "./SplitsLine";
+import { phaseTimes } from "../lib/splits";
 import { avgOf, DNF, eff, fmt, MAX_NOTE, type Penalty, type Solve } from "../lib/stats";
 import { PUZZLES, type PuzzleId } from "../lib/puzzles";
 import { ScramblePreview } from "./ScramblePreview";
@@ -90,6 +92,13 @@ export function SolveDetail({ solves, i, puzzle, onPenalty, onDelete, onNote, on
             <button type="button" className="danger" onClick={() => setConfirmAt(i)}>Delete</button>
           )}
         </div>
+
+        {s.sp && s.sp.length > 0 && (
+          <div className="panel solve-splits">
+            <h2>Phases</h2>
+            <SplitBars times={phaseTimes(s.sp, s.t)} puzzle={puzzle} label="Phase times" />
+          </div>
+        )}
 
         <div className="panel solve-scramble">
           <h2>Scramble</h2>

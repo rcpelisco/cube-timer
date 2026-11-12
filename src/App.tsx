@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DNF, eff, fmt, MAX_NOTE, newBests, type Penalty } from "./lib/stats";
+import { DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
 import { fireConfetti } from "./lib/confetti";
 import { load, save } from "./lib/storage";
 import { firebaseEnabled } from "./lib/firebase";
@@ -22,6 +22,8 @@ import { Header } from "./components/Header";
 import { ScramblePreview } from "./components/ScramblePreview";
 import { ScrambleThumb } from "./components/ScrambleThumb";
 import { TrendChart } from "./components/TrendChart";
+import { SplitsLine } from "./components/SplitsLine";
+import { usePhaseCount } from "./lib/splits";
 import { StatsPanel } from "./components/StatsPanel";
 import { PenaltyButtons, SolveList } from "./components/SolveList";
 import { SolveDetail } from "./components/SolveDetail";
@@ -64,9 +66,10 @@ export default function App() {
   // The solve that last set a personal best (its badge shows while it's the latest solve).
   const [pbAt, setPbAt] = useState<number | null>(null);
 
-  const onFinish = useCallback((t: number, pen: Penalty) => {
+  const onFinish = useCallback((t: number, pen: Penalty, marks: number[]) => {
     const scr = scrambleRef.current?.moves ?? "";
-    const solve = { t, pen, scr, at: Date.now() };
+    const solve: Solve = { t, pen, scr, at: Date.now() };
+    if (marks.length) solve.sp = marks;
     if (newBests(solvesRef.current, solve).length) { setPbAt(solve.at); fireConfetti(); }
     setSolves(list => [...list, solve]);
     nextScramble();
@@ -76,7 +79,8 @@ export default function App() {
   // Computers show solves and stats beside the timer, so "solves" is the timer page there.
   const showTimer = view === "timer" || (!isPhone && view === "solves");
   // The timer only listens for keys and taps while its page is showing.
-  const timer = useTimer({ stageRef, inspection, onFinish, enabled: showTimer });
+  const [phases] = usePhaseCount();
+  const timer = useTimer({ stageRef, inspection, onFinish, enabled: showTimer, phases });
   const active = timer.phase !== "idle";
   const phaseRef = useRef(timer.phase);
   useEffect(() => { phaseRef.current = timer.phase; }, [timer.phase]);
@@ -192,7 +196,7 @@ export default function App() {
   const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut };
   const setSessionGoal = sessions.setGoal;
   const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);
-  const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} goal={current.goal} onGoal={setGoal} />;
+  const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} puzzleId={puzzle} goal={current.goal} onGoal={setGoal} />;
   const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote} />;
 
   const sessionProps = {
@@ -239,6 +243,8 @@ export default function App() {
 
         <div className={stageClass} ref={stageRef}>
           <TimeDisplay shown={shown} running={timer.phase === "running"} />
+          {timer.phase === "running" && phases > 1 && <SplitsLine marks={timer.marks} phases={phases} puzzle={puzzle} live />}
+          {!active && last?.sp && <SplitsLine marks={last.sp} t={last.t} phases={last.sp.length + 1} puzzle={puzzle} />}
           {pbKinds.length > 0 && !active && (
             <div className="pb-badge" role="status">New PB · {pbKinds.join(", ")}</div>
           )}

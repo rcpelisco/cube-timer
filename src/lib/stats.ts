@@ -3,8 +3,9 @@
 export const DNF = -1;
 export type Penalty = 0 | 2 | typeof DNF;
 // note: what you wrote about the solve; left out (not empty) when there is none, since Firestore
-// rejects undefined fields.
-export interface Solve { t: number; pen: Penalty; scr: string; at: number; note?: string }
+// rejects undefined fields. sp: split marks (ms from the start), only on solves timed in phases;
+// see splits.ts.
+export interface Solve { t: number; pen: Penalty; scr: string; at: number; note?: string; sp?: number[] }
 
 export const MAX_NOTE = 500;
 

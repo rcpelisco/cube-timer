@@ -2,6 +2,9 @@ import { memo, useMemo, useState, type FormEvent } from "react";
 import { averageWindow, avgOf, bestRolling, bestSingle, DNF, eff, fmt, meanOf, rolling, shortTime, type Solve, type Stat } from "../lib/stats";
 import { CubeGlyph } from "./SessionPicker";
 import { AverageDetail } from "./AverageDetail";
+import { SplitBars } from "./SplitsLine";
+import { splitMeans } from "../lib/splits";
+import type { PuzzleId } from "../lib/puzzles";
 
 const ROWS: [string, Stat | null, number][] = [
   ["Single", null, 1], ["Mo3", meanOf, 3], ["Ao5", avgOf, 5], ["Ao12", avgOf, 12], ["Ao100", avgOf, 100],
@@ -11,9 +14,10 @@ const ROWS: [string, Stat | null, number][] = [
 type Open = { row: number; which: "current" | "best"; el: HTMLElement };
 
 // memo: the timer re-renders the app every frame while it runs; this only needs to when the solves change.
-export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, goal, onGoal }: {
-  solves: Solve[]; cube?: string; puzzle: string; goal?: number; onGoal?: (goal: number | null) => void;
+export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzleId, goal, onGoal }: {
+  solves: Solve[]; cube?: string; puzzle: string; puzzleId: PuzzleId; goal?: number; onGoal?: (goal: number | null) => void;
 }) {
+  const splits = useMemo(() => splitMeans(solves), [solves]);
   const [open, setOpen] = useState<Open | null>(null);
   const { okCount, mean, values } = useMemo(() => {
     let okCount = 0, sum = 0;
@@ -60,6 +64,12 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, goal,
         <span>Solves <b>{okCount === solves.length ? solves.length : `${okCount}/${solves.length}`}</b></span>
         <span>Mean <b>{fmt(mean)}</b></span>
       </div>
+      {splits && (
+        <div className="stats-splits">
+          <h3>Phases · mean of last {splits.count}</h3>
+          <SplitBars times={splits.means} puzzle={puzzleId} label={`Mean phase times of the last ${splits.count} split solves`} />
+        </div>
+      )}
       {onGoal && <Goal solves={solves} goal={goal} onGoal={onGoal} />}
       {open && win && openRow && (
         <AverageDetail label={openRow[0]} which={open.which} win={win} origin={open.el} onClose={() => setOpen(null)} />

@@ -17,6 +17,7 @@ export interface TimerView {
   ready: boolean;
   display: string | null; // null = show the last result
   warn: 0 | 8 | 12;
+  marks: number[]; // split marks of the running solve, ms from the start
 }
 
 const HOLD_MS = 300;
@@ -24,15 +25,21 @@ const HOLD_MS = 300;
 interface Options {
   stageRef: RefObject<HTMLElement | null>;
   inspection: boolean;
-  onFinish: (t: number, pen: Penalty) => void;
+  onFinish: (t: number, pen: Penalty, marks: number[]) => void;
   enabled?: boolean; // false while another page is showing: keys and taps are ignored
+  // Split timing: presses while running mark the end of each phase, and the last one stops.
+  phases?: number;
 }
+
+// A second press this soon after a mark is a bounce or a double tap, not the next phase.
+const MIN_PHASE_MS = 250;
 
 export function useTimer({
   stageRef,
   inspection,
   onFinish,
   enabled = true,
+  phases = 1,
 }: Options): TimerView {
   const [view, setView] = useState<TimerView>({
     phase: "idle",
@@ -40,10 +47,11 @@ export function useTimer({
     ready: false,
     display: null,
     warn: 0,
+    marks: [],
   });
-  const opts = useRef({ inspection, onFinish, enabled });
+  const opts = useRef({ inspection, onFinish, enabled, phases });
   useLayoutEffect(() => {
-    opts.current = { inspection, onFinish, enabled };
+    opts.current = { inspection, onFinish, enabled, phases };
   });
 
   useEffect(() => {
@@ -61,6 +69,7 @@ export function useTimer({
       t0: 0,
       inspStart: 0,
       inspPen: 0 as Penalty,
+      marks: [] as number[],
       raf: 0,
       holdTimer: 0,
     };
@@ -100,7 +109,7 @@ export function useTimer({
       st.phase = "idle";
       st.holding = st.ready = false;
       sync({ display: null, warn: 0 });
-      opts.current.onFinish(Math.round(t), pen);
+      opts.current.onFinish(Math.round(t), pen, st.marks);
     };
 
     const startInspection = () => {
@@ -117,7 +126,8 @@ export function useTimer({
           : 0;
       st.phase = "running";
       st.t0 = performance.now();
-      sync({ display: "0.00", warn: 0 });
+      st.marks = [];
+      sync({ display: "0.00", warn: 0, marks: [] });
       loop();
     };
 
@@ -132,7 +142,15 @@ export function useTimer({
     const pressDown = () => {
       if (st.phase === "running") {
         st.swallowUp = true;
-        finish(performance.now() - st.t0, st.inspPen);
+        const now = performance.now() - st.t0;
+        const prev = st.marks[st.marks.length - 1] ?? 0;
+        if (opts.current.phases > 1 && now - prev < MIN_PHASE_MS) return;
+        if (st.marks.length < opts.current.phases - 1) {
+          st.marks = [...st.marks, Math.round(now)];
+          sync({ marks: st.marks });
+          return;
+        }
+        finish(now, st.inspPen);
         return;
       }
       if (st.phase === "idle" && opts.current.inspection) {

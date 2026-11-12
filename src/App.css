@@ -885,6 +885,31 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .trainer-ll-step > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .trainer-ll-step .trainer-diagram { width: 76px; }
 
+/* Split timing */
+.splits-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.splits-line b { font: 500 13px var(--font-num); color: var(--ink); margin-left: 5px; }
+.splits-line .now { color: var(--accent); font-weight: 600; }
+/* While solving the time stays centred: the phases sit at the top of the screen. */
+body.solving .stage .splits-line.live { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 28px); font-size: 16px; }
+body.solving .stage .splits-line.live b { font-size: 16px; }
+.setting-row.stacked { flex-wrap: wrap; }
+.setting-row.stacked > span { flex: 1 1 260px; }
+.setting-row .segmented.phases { grid-template-columns: repeat(3, 1fr); flex: 0 1 280px; margin-left: auto; }
+.setting-row .segmented.phases button { padding: 6px 10px; font-size: 13px; }
+.split-bars { display: flex; flex-direction: column; gap: 8px; }
+.split-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; }
+.split-bar span { flex-basis: 0; min-width: 3px; }
+.split-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.split-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.split-legend b { font: 500 13px var(--font-num); color: var(--ink); }
+.split-legend small { font-size: 11px; }
+.ph-0 { background: var(--accent); }
+.ph-1 { background: color-mix(in srgb, var(--accent) 65%, var(--surface)); }
+.ph-2 { background: color-mix(in srgb, var(--accent) 40%, var(--surface)); }
+.ph-3 { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.stats-splits { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.stats-splits h3 { margin: 0 0 8px; font: 600 11px var(--font-ui); letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+
 /* Chart card tabs: Trend, Spread, Days */
 .chart-tabs { margin-bottom: 10px; }
 .chart-tabs button { padding: 4px 10px; font-size: 12px; }
