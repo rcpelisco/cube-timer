@@ -273,11 +273,12 @@ export function useTimer({
     };
   }, [stageRef]);
 
-  useWakeLock(true);
+  // Keep the screen on only while this timer's page is showing; elsewhere the phone may sleep.
+  useWakeLock(enabled);
   return view;
 }
 
-// Keep the screen on while the app is open (supported on iOS 16.4+ and recent Chrome).
+// Keep the screen on while a timer page is open (supported on iOS 16.4+ and recent Chrome).
 // The browser drops the lock whenever the page is hidden, so take it again on return.
 // iOS can refuse a request that isn't made from a tap (at launch, or after returning from the
 // home screen), so every tap or key press also retries while no lock is held.
@@ -328,6 +329,7 @@ function useWakeLock(active: boolean) {
       window.removeEventListener("pointerdown", acquire, { capture: true });
       window.removeEventListener("keydown", acquire, { capture: true });
       lock?.release().catch(() => {});
+      setWakeLockStatus({ state: "idle", detail: "off this page, so the screen may sleep" });
     };
   }, [active]);
 }
