@@ -276,21 +276,34 @@ export function useTimer({
   return view;
 }
 
-// Keep the screen on during an attempt (supported on iOS 16.4+ and recent Chrome).
+// Keep the screen on while the app is open (supported on iOS 16.4+ and recent Chrome).
+// The browser drops the lock whenever the page is hidden, so take it again on return.
 function useWakeLock(active: boolean) {
   useEffect(() => {
     if (!active || !("wakeLock" in navigator)) return;
     let lock: WakeLockSentinel | null = null,
-      released = false;
-    navigator.wakeLock
-      .request("screen")
-      .then((l) => {
-        if (released) l.release();
-        else lock = l;
-      })
-      .catch(() => {});
+      pending = false,
+      disposed = false;
+    const acquire = () => {
+      if (disposed || pending || document.visibilityState !== "visible") return;
+      if (lock && !lock.released) return;
+      pending = true;
+      navigator.wakeLock
+        .request("screen")
+        .then((l) => {
+          if (disposed) l.release().catch(() => {});
+          else lock = l;
+        })
+        .catch(() => {})
+        .finally(() => {
+          pending = false;
+        });
+    };
+    acquire();
+    document.addEventListener("visibilitychange", acquire);
     return () => {
-      released = true;
+      disposed = true;
+      document.removeEventListener("visibilitychange", acquire);
       lock?.release().catch(() => {});
     };
   }, [active]);
