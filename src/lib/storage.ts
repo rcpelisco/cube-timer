@@ -1,4 +1,5 @@
 import { newSession, type Session } from "./sessions";
+import { isPersonalKey } from "./deviceOwner";
 
 const KEY = "cubeTimer.v2";
 const LEGACY_KEY = "cubeTimer.v1"; // single list of solves, before sessions existed
@@ -28,16 +29,18 @@ export function load(): Saved {
 // hidden or closed.
 let pending: Saved | null = null;
 let scheduled = false;
+let wiped = false;
 
 function flush() {
   scheduled = false;
-  if (!pending) return;
+  if (!pending || wiped) return;
   const data = pending;
   pending = null;
   try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* ignore */ }
 }
 
 export function save(data: Saved) {
+  if (wiped) return;
   pending = data;
   if (scheduled) return;
   scheduled = true;
@@ -48,4 +51,16 @@ export function save(data: Saved) {
 if (typeof window !== "undefined") {
   window.addEventListener("pagehide", flush);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+}
+
+// Removes this person's data from the device (see isPersonalKey) and stops any further saves, so
+// nothing is written back before the page reloads.
+export function wipeDevice() {
+  wiped = true;
+  pending = null;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && isPersonalKey(k)) keys.push(k); }
+    for (const k of keys) localStorage.removeItem(k);
+  } catch { /* storage unavailable */ }
 }

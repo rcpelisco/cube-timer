@@ -2,8 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { bestRolling, DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
 import { FORMATS, limitPenalty, moveOldRounds, pastRounds, roundStatus, toRecord, useMockComp } from "./lib/mockComp";
 import { fireConfetti } from "./lib/confetti";
-import { load, save } from "./lib/storage";
-import { firebaseEnabled } from "./lib/firebase";
+import { load, save, wipeDevice } from "./lib/storage";
+import { firebaseEnabled, loadFirebase } from "./lib/firebase";
 import { PUZZLES, toPuzzle } from "./lib/puzzles";
 import { importCsTimer } from "./lib/csTimer";
 import { useBoolPref } from "./lib/boolPref";
@@ -279,7 +279,23 @@ export default function App() {
   // Clears the cloud copy, then signs out so this device doesn't upload its data straight back.
   const signOut = auth.signOut;
   const onDeleteCloud = useCallback(async () => { await deleteCloud(); signOut(); }, [deleteCloud, signOut]);
-  const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut, onDeleteCloud };
+  // For a shared device: signs out, then removes this person's solves, sessions and algorithm
+  // progress from it, along with Firestore's offline copy, and starts the app afresh. Only offered
+  // once everything is synced, so nothing is lost.
+  const onSignOutAndClear = useCallback(async () => {
+    const fb = await loadFirebase();
+    await fb.signOut(fb.auth);
+    wipeDevice();
+    try {
+      await fb.terminate(fb.db);
+      await fb.clearIndexedDbPersistence(fb.db);
+    } catch { /* another tab still has it open; the cache only holds what the account can read */ }
+    location.reload();
+  }, []);
+  const account = {
+    enabled: firebaseEnabled, user: auth.user, sync, error: auth.error,
+    onSignIn: auth.signIn, onSignOut: auth.signOut, onSignOutAndClear, onDeleteCloud,
+  };
   const setSessionGoal = sessions.setGoal;
   const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);
   const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} puzzleId={puzzle} goal={current.goal} onGoal={setGoal} />;

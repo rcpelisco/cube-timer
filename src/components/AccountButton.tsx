@@ -9,11 +9,13 @@ export interface AccountProps {
   error: string | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  // Sign out and remove this person's data from the device (App.tsx); offered once synced.
+  onSignOutAndClear?: () => Promise<void>;
   onDeleteCloud?: () => Promise<void>;
 }
 
 
-export function AccountButton({ enabled, user, sync, error, onSignIn, onSignOut, onSettings }: AccountProps & { onSettings?: () => void }) {
+export function AccountButton({ enabled, user, sync, error, onSignIn, onSignOut, onSignOutAndClear, onSettings }: AccountProps & { onSettings?: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -53,6 +55,12 @@ export function AccountButton({ enabled, user, sync, error, onSignIn, onSignOut,
           <div className={`account-sync ${sync}`}>{SYNC_LABEL[sync]}</div>
           {onSettings && <button type="button" role="menuitem" onClick={() => { setOpen(false); onSettings(); }}>Settings</button>}
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onSignOut(); }}>Sign out</button>
+          {onSignOutAndClear && (
+            <button type="button" role="menuitem" disabled={sync !== "synced"} title={sync !== "synced" ? "Available once everything has synced" : undefined}
+              onClick={() => { setOpen(false); onSignOutAndClear(); }}>
+              Sign out and remove from this device
+            </button>
+          )}
         </div>
       )}
     </div>

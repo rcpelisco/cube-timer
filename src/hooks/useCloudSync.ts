@@ -5,12 +5,16 @@ import { loadFirebase, type FirebaseClient } from "../lib/firebase";
 import { mergeSessions, type Session } from "../lib/sessions";
 import { pickAlgPrefs, type AlgPrefs } from "../lib/algPrefs";
 import { diffDocs, fromDocs, stable, toBatches, toDocs, type SyncState } from "../lib/cloudDocs";
+import { readOwner, readSyncedAt, stashUnsynced, syncKey, takeStash, writeOwner } from "../lib/deviceOwner";
 
 // Signed in, the cloud copy is the source of truth and localStorage mirrors it. The data is split
 // over several documents (lib/cloudDocs.ts) so no single document hits Firestore's 1 MiB limit,
 // and a new solve only rewrites the session's last chunk of solves.
 // On sign-in, anything local that's newer than this device's last sync is merged in: solves made
 // while signed out are kept, but solves and sessions deleted on another device don't come back.
+// That's only for the account the device's data belongs to (lib/deviceOwner.ts): when a different
+// account signs in, the previous owner's data is never merged into it. Anything they hadn't synced
+// yet is put aside on the device and merged back when they next sign in here.
 // Algorithm settings (algs: statuses, main algorithms, cross color) sync as one block: the most
 // recently changed copy wins (lib/algPrefs.ts).
 
@@ -19,10 +23,6 @@ export const SYNC_LABEL: Record<SyncStatus, string> = {
   off: "", loading: "Syncing…", synced: "Synced", saving: "Saving…", offline: "Offline · will sync", error: "Sync failed",
 };
 
-const syncKey = (uid: string) => `cubeTimer.syncedAt.${uid}`;
-function readSyncedAt(uid: string) {
-  try { return Number(localStorage.getItem(syncKey(uid))) || 0; } catch { return 0; }
-}
 function writeSyncedAt(uid: string) {
   try { localStorage.setItem(syncKey(uid), String(Date.now())); } catch { /* ignore */ }
 }
@@ -52,6 +52,8 @@ export interface CloudSync {
   // offline or a delete fails (sync then stays stopped until the app reloads or you sign in again).
   deleteCloud: () => Promise<void>;
 }
+
+const NO_ALG_PREFS: AlgPrefs = { statuses: {}, choices: {}, cross: "white", updatedAt: 0 };
 
 export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions, setInspection, setAlgPrefs }: Options): CloudSync {
   const [status, setStatus] = useState<SyncStatus>("off");
@@ -126,11 +128,21 @@ export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions
           if (fromCache && !remote.exists) { setStatus("offline"); return; }
           // Another device is midway through writing; wait for the rest.
           if (!remote.complete) return;
+          // This device's own data, or, if it belongs to another account, only what this account
+          // put aside here earlier (see lib/deviceOwner.ts).
+          const owner = readOwner();
+          let mine: { sessions: Session[]; algs: AlgPrefs } = local.current;
+          if (owner && owner !== uid) {
+            stashUnsynced(owner, local.current.sessions, local.current.algs);
+            const stash = takeStash(uid);
+            mine = { sessions: stash.sessions, algs: stash.algs ?? NO_ALG_PREFS };
+          }
           const merged: SyncState = {
-            sessions: remote.sessions ? mergeSessions(remote.sessions, local.current.sessions, readSyncedAt(uid)) : local.current.sessions,
+            sessions: remote.sessions ? mergeSessions(remote.sessions, mine.sessions, readSyncedAt(uid)) : mine.sessions,
             inspection: remote.exists ? remote.inspection : local.current.inspection,
-            algs: pickAlgPrefs(local.current.algs, remote.algs),
+            algs: pickAlgPrefs(mine.algs, remote.algs),
           };
+          writeOwner(uid);
           ready.current = true;
           setSessions(merged.sessions);
           setInspection(merged.inspection);

@@ -29,5 +29,5 @@ export {
   GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut,
 } from "firebase/auth";
 export {
-  collection, doc, getDocsFromServer, onSnapshot, onSnapshotsInSync, serverTimestamp, writeBatch,
+  clearIndexedDbPersistence, collection, doc, getDocsFromServer, onSnapshot, onSnapshotsInSync, serverTimestamp, terminate, writeBatch,
 } from "firebase/firestore";

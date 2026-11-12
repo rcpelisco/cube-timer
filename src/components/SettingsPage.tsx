@@ -30,7 +30,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   solveActions?: { solves: Solve[]; onClear: () => void };
   onImport: (text: string) => ImportResult;
 }) {
-  const { enabled, user, sync, error, onSignIn, onSignOut, onDeleteCloud } = account;
+  const { enabled, user, sync, error, onSignIn, onSignOut, onSignOutAndClear, onDeleteCloud } = account;
   // Shown once signed out after deleting the cloud copy; gone on the next sign-in.
   const [cloudDeleted, setCloudDeleted] = useState(false);
   const name = user?.displayName || user?.email || "Signed in";
@@ -158,6 +158,16 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
               </span>
             </div>
             <button type="button" className="wide" onClick={onSignOut}>Sign out</button>
+            {onSignOutAndClear && (
+              <>
+                <button type="button" className="wide" disabled={sync !== "synced"} onClick={onSignOutAndClear}>Sign out and remove from this device</button>
+                <p className="setting-note">
+                  {sync === "synced"
+                    ? "On a shared device: also removes your solves, sessions, algorithm progress and Trainer times from this device. Your synced data stays in your account; Trainer times are only kept on this device."
+                    : "Available once everything has synced."}
+                </p>
+              </>
+            )}
             {onDeleteCloud && <DeleteCloudData email={user.email} onDelete={onDeleteCloud} onDeleted={() => setCloudDeleted(true)} />}
           </>
         )}
