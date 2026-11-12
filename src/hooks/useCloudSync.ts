@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DocumentSnapshot, QuerySnapshot } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { loadFirebase, type FirebaseClient } from "../lib/firebase";
@@ -44,7 +44,16 @@ interface Options {
   setAlgPrefs: (p: AlgPrefs) => void;
 }
 
-export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions, setInspection, setAlgPrefs }: Options): SyncStatus {
+export interface CloudSync {
+  status: SyncStatus;
+  // Deletes everything this account has in Firestore (sessions, chunks of solves, settings). Sync
+  // stops first so nothing is written back; the caller signs out afterwards, or the next change
+  // would upload this device's copy again. This device's own data is untouched. Rejects if
+  // offline or a delete fails (sync then stays stopped until the app reloads or you sign in again).
+  deleteCloud: () => Promise<void>;
+}
+
+export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions, setInspection, setAlgPrefs }: Options): CloudSync {
   const [status, setStatus] = useState<SyncStatus>("off");
   const local = useRef<SyncState>({ sessions, inspection, algs: algPrefs });
   const ready = useRef(false);
@@ -56,6 +65,8 @@ export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions
 
   // Write whatever differs between `state` and what Firestore holds.
   const push = useRef<(state: SyncState) => void>(() => {});
+  // Stops the current listeners (set while signed in).
+  const stopListening = useRef<() => void>(() => {});
 
   useEffect(() => {
     ready.current = false;
@@ -160,7 +171,8 @@ export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions
     // Signed in means Firebase is already loaded (useAuth), so this resolves straight away.
     let stop: (() => void) | null = null, cancelled = false;
     loadFirebase().then(fb => { if (!cancelled) stop = listen(fb, user); }, () => setStatus("error"));
-    return () => { cancelled = true; stop?.(); ready.current = false; push.current = () => {}; };
+    stopListening.current = () => { cancelled = true; stop?.(); stop = null; ready.current = false; push.current = () => {}; };
+    return () => stopListening.current();
   }, [user, setSessions, setInspection, setAlgPrefs]);
 
   // Push local changes (solves, penalties, sessions, settings, algorithm progress) after a short pause.
@@ -173,5 +185,34 @@ export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions
     return () => clearTimeout(t);
   }, [user, sessions, inspection, algPrefs]);
 
-  return status;
+  const deleteCloud = useCallback(async () => {
+    if (!user) return;
+    if (!navigator.onLine) throw new Error("offline");
+    const fb = await loadFirebase();
+    stopListening.current();
+    setStatus("saving");
+    const { collection, doc, getDocsFromServer, writeBatch } = fb;
+    const uid = user.uid;
+    try {
+      // From the server, not the local cache, so documents this device never saw go too.
+      const [sessionDocs, chunkDocs] = await Promise.all(
+        ["sessions", "chunks"].map(name => getDocsFromServer(collection(fb.db, "users", uid, name))),
+      );
+      const refs = [...sessionDocs.docs, ...chunkDocs.docs].map(d => d.ref);
+      refs.push(doc(fb.db, "users", uid));
+      for (let i = 0; i < refs.length; i += 400) {
+        const batch = writeBatch(fb.db);
+        for (const r of refs.slice(i, i + 400)) batch.delete(r);
+        await batch.commit();
+      }
+      known.current = new Map();
+      try { localStorage.removeItem(syncKey(uid)); } catch { /* ignore */ }
+      setStatus("off");
+    } catch (e) {
+      setStatus("error");
+      throw e;
+    }
+  }, [user]);
+
+  return { status, deleteCloud };
 }

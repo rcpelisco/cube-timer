@@ -1227,3 +1227,9 @@ body.solving .splits-badge { display: none; }
 .csp-reports summary { cursor: pointer; font-weight: 600; }
 .csp-reports ul { margin: 10px 0; padding-left: 18px; font: 400 12px/1.5 var(--font-num); overflow-wrap: anywhere; }
 .csp-reports small { display: block; color: var(--muted); }
+.delete-cloud { margin-top: 10px; padding: 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--hold) 45%, transparent); }
+.delete-cloud p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.45; }
+.delete-cloud b { overflow-wrap: anywhere; }
+.delete-cloud .account-error { max-width: none; }
+.delete-cloud-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.delete-cloud-actions .strong { font-weight: 600; }

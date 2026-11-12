@@ -44,6 +44,12 @@ await check("the old single-document layout", () => ok(setDoc(doc(me, "users/me"
 await check("read own user document", () => ok(getDoc(doc(me, "users/me"))));
 await check("list own sessions and chunks", () => ok(Promise.all([getDocs(collection(me, "users/me/sessions")), getDocs(collection(me, "users/me/chunks"))])));
 await check("delete own chunk and session", () => ok(Promise.all([deleteDoc(doc(me, "users/me/chunks", `${SID}_1`)), deleteDoc(doc(me, "users/me/sessions/abc124"))])));
+await check("delete everything at once (Delete cloud data)", () => {
+  const b = writeBatch(me);
+  for (const p of ["users/me/sessions/abc123", `users/me/sessions/${SID}`, `users/me/chunks/${SID}_0`, "users/me"]) b.delete(doc(me, p));
+  return ok(b.commit());
+});
+await check("put the account back for the checks below", () => ok(setDoc(doc(me, "users/me"), user)));
 
 console.log("Other people's data is off limits:");
 await check("signed out can't read", () => no(getDoc(doc(anon, "users/me"))));

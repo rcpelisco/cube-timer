@@ -9,6 +9,7 @@ export interface AccountProps {
   error: string | null;
   onSignIn: () => void;
   onSignOut: () => void;
+  onDeleteCloud?: () => Promise<void>;
 }
 
 

@@ -19,7 +19,7 @@ import { TARGET_OPTIONS, useDailyTarget } from "../lib/dailyTarget";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
 import { appCheckSiteKey } from "../lib/firebase";
 import { cspReports } from "../lib/cspReports";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 // Settings: timer options, algorithms, sessions (with Copy times / Clear solves on the current
 // one), import & export, appearance, and your Google account / sync. Phones reach it from the tab
@@ -30,7 +30,9 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   solveActions?: { solves: Solve[]; onClear: () => void };
   onImport: (text: string) => ImportResult;
 }) {
-  const { enabled, user, sync, error, onSignIn, onSignOut } = account;
+  const { enabled, user, sync, error, onSignIn, onSignOut, onDeleteCloud } = account;
+  // Shown once signed out after deleting the cloud copy; gone on the next sign-in.
+  const [cloudDeleted, setCloudDeleted] = useState(false);
   const name = user?.displayName || user?.email || "Signed in";
   const [hideTime, setHideTime] = useHideTime();
   const [showTriggers, setShowTriggers] = useShowTriggers();
@@ -137,8 +139,10 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           <p className="setting-note">Sign-in isn't set up for this copy of the app.</p>
         ) : !user ? (
           <>
-            <p className="setting-note">Sign in to sync your solves, sessions and algorithm progress between devices.</p>
-            <button type="button" className="google wide" onClick={onSignIn}><GoogleMark /> Sign in with Google</button>
+            {cloudDeleted
+              ? <p className="setting-note" role="status">Your cloud data was deleted and you've been signed out. Your solves are still on this device.</p>
+              : <p className="setting-note">Sign in to sync your solves, sessions and algorithm progress between devices.</p>}
+            <button type="button" className="google wide" onClick={() => { setCloudDeleted(false); onSignIn(); }}><GoogleMark /> Sign in with Google</button>
             {error && <p className="account-error" role="alert">{error}</p>}
           </>
         ) : (
@@ -154,6 +158,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
               </span>
             </div>
             <button type="button" className="wide" onClick={onSignOut}>Sign out</button>
+            {onDeleteCloud && <DeleteCloudData email={user.email} onDelete={onDeleteCloud} onDeleted={() => setCloudDeleted(true)} />}
           </>
         )}
         {enabled && appCheckSiteKey && (
@@ -184,5 +189,41 @@ function CspReportList() {
       </ul>
       <button type="button" onClick={cspReports.clear}>Clear</button>
     </details>
+  );
+}
+
+// Settings › Account, signed in: delete everything this account has in the cloud. A first tap
+// explains what happens; the second deletes, then the app signs out (see App.tsx).
+function DeleteCloudData({ email, onDelete, onDeleted }: { email: string | null; onDelete: () => Promise<void>; onDeleted: () => void }) {
+  const [step, setStep] = useState<"idle" | "confirm" | "deleting">("idle");
+  const [failed, setFailed] = useState<string | null>(null);
+  const run = () => {
+    setStep("deleting");
+    setFailed(null);
+    onDelete().then(onDeleted, (e: unknown) => {
+      setStep("confirm");
+      setFailed((e as Error)?.message === "offline" ? "You're offline. Connect and try again." : "Couldn't delete everything. Try again.");
+    });
+  };
+  if (step === "idle") {
+    return <button type="button" className="wide danger" onClick={() => setStep("confirm")}>Delete cloud data</button>;
+  }
+  return (
+    <div className="delete-cloud" role="group" aria-label="Delete cloud data">
+      <p>
+        Delete everything stored in the cloud{email ? <> for <b>{email}</b></> : ""}? Your sessions, solves and
+        algorithm progress are removed from the cloud and you'll be signed out. This device keeps its copy.
+      </p>
+      <p className="setting-note">
+        Other devices still signed in will upload their copy again the next time they sync. Sign out on them first.
+      </p>
+      {failed && <p className="account-error" role="alert">{failed}</p>}
+      <div className="delete-cloud-actions">
+        <button type="button" onClick={() => { setStep("idle"); setFailed(null); }} disabled={step === "deleting"}>Cancel</button>
+        <button type="button" className="danger strong" onClick={run} disabled={step === "deleting"}>
+          {step === "deleting" ? "Deleting…" : "Delete cloud data"}
+        </button>
+      </div>
+    </div>
   );
 }

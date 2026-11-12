@@ -91,7 +91,7 @@ export default function App() {
 
   const algPrefs = useAlgPrefs();
   const auth = useAuth();
-  const sync = useCloudSync({
+  const { status: sync, deleteCloud } = useCloudSync({
     user: auth.user, sessions: sessions.sessions, inspection, algPrefs: algPrefs.prefs,
     setSessions: sessions.setSessions, setInspection, setAlgPrefs: algPrefs.replace,
   });
@@ -276,7 +276,10 @@ export default function App() {
     landed && !active && landedGoal && "goal",
   ].filter(Boolean).join(" ");
 
-  const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut };
+  // Clears the cloud copy, then signs out so this device doesn't upload its data straight back.
+  const signOut = auth.signOut;
+  const onDeleteCloud = useCallback(async () => { await deleteCloud(); signOut(); }, [deleteCloud, signOut]);
+  const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut, onDeleteCloud };
   const setSessionGoal = sessions.setGoal;
   const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);
   const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} puzzleId={puzzle} goal={current.goal} onGoal={setGoal} />;
