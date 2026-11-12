@@ -6,45 +6,54 @@ import { PbHistory } from "./PbHistory";
 import { SplitBars } from "./SplitsLine";
 import { splitMeans } from "../lib/splits";
 import type { PuzzleId } from "../lib/puzzles";
+import { addProblem, MAX_AVG, MIN_AVG, useExtraAverages } from "../lib/extraAverages";
 
-const ROWS: [string, Stat | null, number][] = [
-  ["Single", null, 1], ["Mo3", meanOf, 3], ["Ao5", avgOf, 5], ["Ao12", avgOf, 12], ["Ao100", avgOf, 100],
+// name, how it's worked out (null: a single), size, and whether you added it (it can be removed).
+type Row = [string, Stat | null, number, boolean];
+const ROWS: Row[] = [
+  ["Single", null, 1, false], ["Mo3", meanOf, 3, false], ["Ao5", avgOf, 5, false], ["Ao12", avgOf, 12, false], ["Ao100", avgOf, 100, false],
 ];
 
 // el: the tapped value, which the popup's big value flies out of and back into.
-type Open = { row: number; which: "current" | "best"; el: HTMLElement };
+type Open = { name: string; which: "current" | "best"; el: HTMLElement };
 
 // memo: the timer re-renders the app every frame while it runs; this only needs to when the solves change.
 export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzleId, goal, onGoal }: {
   solves: Solve[]; cube?: string; puzzle: string; puzzleId: PuzzleId; goal?: number; onGoal?: (goal: number | null) => void;
 }) {
   const splits = useMemo(() => splitMeans(solves), [solves]);
+  const extra = useExtraAverages();
+  // Built-in rows plus the averages you added, in order of size.
+  const rows = useMemo<Row[]>(
+    () => [...ROWS, ...extra.list.map((n): Row => [`Ao${n}`, avgOf, n, true])].sort((a, b) => a[2] - b[2]),
+    [extra.list],
+  );
   const [open, setOpen] = useState<Open | null>(null);
   const [pbsOpen, setPbsOpen] = useState(false);
   const { okCount, mean, values } = useMemo(() => {
     let okCount = 0, sum = 0;
     for (const s of solves) if (s.pen !== DNF) { okCount++; sum += eff(s); }
-    const values = ROWS.map(([, fn, n]) => fn
+    const values = rows.map(([, fn, n]) => fn
       ? { cur: fn(solves, n), best: bestRolling(solves, fn, n) }
       : { cur: solves.length ? eff(solves[solves.length - 1]) : null, best: bestSingle(solves) });
     return { okCount, mean: okCount ? sum / okCount : null, values };
-  }, [solves]);
+  }, [solves, rows]);
 
   // Re-worked out from the solves as they are now, so a penalty or delete updates the open list.
-  const openRow = open && ROWS[open.row];
+  const openRow = open ? rows.find(r => r[0] === open.name) ?? null : null;
   const win = useMemo(
     () => (openRow && openRow[1] && open ? averageWindow(solves, openRow[1], openRow[2], open.which) : null),
     [solves, openRow, open],
   );
 
   // Averages are tappable: they open the solves behind them.
-  const cell = (row: number, which: Open["which"], value: number | null, className: string) => {
-    const fn = ROWS[row][1];
+  const cell = (row: Row, which: Open["which"], value: number | null, className: string) => {
+    const [name, fn] = row;
     if (!fn || value == null) return <td className={className}>{fmt(value)}</td>;
     return (
       <td className={className}>
-        <button type="button" className="stat-btn" aria-label={`${ROWS[row][0]} ${which}: ${fmt(value)}, show solves`}
-          onClick={e => setOpen({ row, which, el: e.currentTarget })}>{fmt(value)}</button>
+        <button type="button" className="stat-btn" aria-label={`${name} ${which}: ${fmt(value)}, show solves`}
+          onClick={e => setOpen({ name, which, el: e.currentTarget })}>{fmt(value)}</button>
       </td>
     );
   };
@@ -55,13 +64,24 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
       <table className="stats">
         <thead><tr><th></th><th>Current</th><th>Best</th></tr></thead>
         <tbody>
-          {ROWS.map(([name], row) => {
-            const { cur, best } = values[row];
+          {rows.map((row, i) => {
+            const [name, , n, added] = row;
+            const { cur, best } = values[i];
             const pb = cur != null && cur === best && isFinite(cur);
-            return <tr key={name}><td>{name}</td>{cell(row, "current", cur, pb ? "best" : "")}{cell(row, "best", best, "")}</tr>;
+            return (
+              <tr key={name}>
+                <td>
+                  {name}
+                  {added && <button type="button" className="avg-remove" aria-label={`Remove ${name}`} title={`Remove ${name}`}
+                    onClick={() => extra.remove(n)}>✕</button>}
+                </td>
+                {cell(row, "current", cur, pb ? "best" : "")}{cell(row, "best", best, "")}
+              </tr>
+            );
           })}
         </tbody>
       </table>
+      <AddAverage list={extra.list} onAdd={extra.add} />
       <div className="summary">
         <span>Solves <b>{okCount === solves.length ? solves.length : `${okCount}/${solves.length}`}</b></span>
         <span>Mean <b>{fmt(mean)}</b></span>
@@ -81,6 +101,33 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
     </div>
   );
 });
+
+// "+ Average" under the table: type a size (e.g. 50) to add an AoN row.
+function AddAverage({ list, onAdd }: { list: number[]; onAdd: (n: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const n = Number(draft.trim().replace(/^ao/i, ""));
+  const problem = draft.trim() ? addProblem(n, list) : null;
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!draft.trim() || problem) return;
+    onAdd(n); setDraft(""); setEditing(false);
+  };
+  if (!editing) return <button type="button" className="avg-add" onClick={() => setEditing(true)}>+ Average</button>;
+  return (
+    <form className="avg-add-form" onSubmit={submit}>
+      <label>
+        <span>Ao</span>
+        <input type="text" inputMode="numeric" value={draft} autoFocus placeholder="50" aria-label="Number of solves in the average"
+          aria-invalid={!!problem} onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); setEditing(false); setDraft(""); } }} />
+      </label>
+      <button type="button" onClick={() => { setEditing(false); setDraft(""); }}>Cancel</button>
+      <button type="submit" className="on" disabled={!draft.trim() || !!problem}>Add</button>
+      <small className={problem ? "avg-add-problem" : ""}>{problem ?? `${MIN_AVG}–${MAX_AVG} solves, 5% trimmed each end above 12.`}</small>
+    </form>
+  );
+}
 
 const goalText = shortTime;
 
