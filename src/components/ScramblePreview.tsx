@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TwistyPlayer } from "cubing/twisty";
-import { PUZZLES, type PuzzleId } from "../lib/puzzles";
+import { aspectStyle, PUZZLES, type PuzzleId } from "../lib/puzzles";
 import { loadNet, netColors, type NetLayout } from "../lib/cubeNet";
 
 // Flat drawing of the scrambled puzzle. Cubes get our own net (rounded stickers with gaps); the
-// FTO's triangles use cubing.js's viewer. cubing.js loads on first use so it doesn't slow down
+// other puzzles use cubing.js's viewer. Each is sized by its shape (--aspect, width / height). cubing.js loads on first use so it doesn't slow down
 // the app's first paint.
 export function ScramblePreview({ puzzle, moves, className = "" }: { puzzle: PuzzleId; moves: string | null; className?: string }) {
   const label = `${PUZZLES[puzzle].label} after scramble`;
   const classes = `preview preview-${puzzle}${moves ? "" : " pending"} ${className}`;
-  return puzzle === "fto"
-    ? <TwistyNet puzzle={puzzle} moves={moves} className={classes} label={label} />
-    : <CubeNet puzzle={puzzle} moves={moves} className={classes} label={label} />;
+  return PUZZLES[puzzle].cube
+    ? <CubeNet puzzle={puzzle} moves={moves} className={classes} label={label} />
+    : <TwistyNet puzzle={puzzle} moves={moves} className={classes} label={label} />;
 }
 
 function CubeNet({ puzzle, moves, className, label }: { puzzle: PuzzleId; moves: string | null; className: string; label: string }) {
@@ -31,7 +31,7 @@ function CubeNet({ puzzle, moves, className, label }: { puzzle: PuzzleId; moves:
   }, [net, moves]);
 
   return (
-    <div className={className} role="img" aria-label={label}>
+    <div className={className} style={aspectStyle(puzzle)} role="img" aria-label={label}>
       {net && colors && (
         <svg className="cube-net" viewBox={net.viewBox} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           {net.stickers.map(s => {
@@ -51,12 +51,15 @@ function TwistyNet({ puzzle, moves, className, label }: { puzzle: PuzzleId; move
   const host = useRef<HTMLDivElement>(null);
   const [player, setPlayer] = useState<TwistyPlayer | null>(null);
 
+  // A new player per puzzle, made with its puzzle from the start: one made as a 3×3 and switched
+  // can end up drawing both.
   useEffect(() => {
     let cancelled = false;
     let created: TwistyPlayer | null = null;
     import("cubing/twisty").then(({ TwistyPlayer }) => {
       if (cancelled || !host.current) return;
       created = new TwistyPlayer({
+        puzzle: PUZZLES[puzzle].viewer as TwistyPlayer["puzzle"],
         visualization: "2D",
         background: "none",
         controlPanel: "none",
@@ -67,15 +70,14 @@ function TwistyNet({ puzzle, moves, className, label }: { puzzle: PuzzleId; move
       host.current.append(created);
       setPlayer(created);
     });
-    return () => { cancelled = true; created?.remove(); };
-  }, []);
+    return () => { cancelled = true; created?.remove(); setPlayer(null); };
+  }, [puzzle]);
 
   useEffect(() => {
     if (!player) return;
-    player.puzzle = PUZZLES[puzzle].viewer as TwistyPlayer["puzzle"];
     player.experimentalSetupAlg = moves ?? "";
     player.alg = "";
-  }, [player, puzzle, moves]);
+  }, [player, moves]);
 
-  return <div className={className} ref={host} role="img" aria-label={label} />;
+  return <div className={className} style={aspectStyle(puzzle)} ref={host} role="img" aria-label={label} />;
 }

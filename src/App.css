@@ -242,14 +242,20 @@ button:disabled { opacity: 0.5; cursor: default; }
 .preview { display: grid; place-items: center; min-height: 140px; }
 .preview.pending { opacity: 0.35; }
 .cube-net { display: block; }
-.preview twisty-player, .preview .cube-net { width: 228px; height: 172px; max-width: 100%; }
-.preview-fto twisty-player { width: 300px; height: 150px; }
-.moves-444 { font-size: clamp(15px, 1.8vw, 18px); }
+/* Sized by the puzzle's shape (--aspect = width / height): 172px tall, or 300px wide if that's less. */
+.preview twisty-player, .preview .cube-net {
+  --w: min(300px, calc(172px * var(--aspect, 1.333)));
+  width: var(--w); height: calc(var(--w) / var(--aspect, 1.333)); max-width: 100%;
+}
+/* Long scrambles (big cubes, Megaminx, Square-1) in smaller type; Megaminx keeps its seven lines. */
+:is(.moves-444, .moves-555, .moves-sq1) { font-size: clamp(15px, 1.8vw, 18px); }
+:is(.moves-666, .moves-777, .moves-minx) { font-size: clamp(13px, 1.5vw, 16px); }
+/* Its 11-move lines fit a phone's width. */
+.moves-minx { white-space: pre-line; word-spacing: 0; font-size: clamp(11px, 3.1vw, 16px); }
 
 /* Phone-only scramble thumbnail, in the bottom row beside the averages */
 .preview.scramble-thumb { min-height: 0; place-items: center; }
-.scramble-thumb twisty-player, .scramble-thumb .cube-net { width: 120px; height: 90px; }
-.scramble-thumb.preview-fto twisty-player { width: 140px; height: 70px; }
+.scramble-thumb twisty-player, .scramble-thumb .cube-net { --w: min(140px, calc(90px * var(--aspect, 1.333))); }
 .phone-lower { display: flex; gap: 10px; align-items: stretch; }
 .phone-lower .quick-stats { flex: 1 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 10px; align-content: center; }
 
@@ -268,14 +274,14 @@ button:disabled { opacity: 0.5; cursor: default; }
 .preview.scramble-zoom { min-height: 0; }
 /* Sized boxes, so the flight between them can be measured before the drawing has loaded. */
 .thumb-pic, .zoom-pic { display: grid; place-items: center; }
-.zoom-pic { width: min(92vw, 560px); aspect-ratio: 4 / 3; }
-.zoom-pic:has(.preview-fto) { aspect-ratio: 2 / 1; }
-.scramble-zoom twisty-player, .scramble-zoom .cube-net { width: min(92vw, 560px); height: calc(min(92vw, 560px) * 0.75); }
-.scramble-zoom.preview-fto twisty-player { height: calc(min(92vw, 560px) * 0.5); }
+.zoom-pic { --w: min(92vw, 560px, calc(55vh * var(--aspect, 1.333))); width: var(--w); aspect-ratio: var(--aspect, 1.333); }
+.scramble-zoom twisty-player, .scramble-zoom .cube-net { --w: min(92vw, 560px, calc(55vh * var(--aspect, 1.333))); }
 .scramble-overlay .moves { margin: 0; max-width: 560px; text-align: center; }
 /* Text size buttons (A− / A+): --scr-scale multiplies the usual scramble size. */
 .scramble-overlay .moves { font-size: calc(clamp(17px, 2.3vw, 22px) * var(--scr-scale, 1)); }
-.scramble-overlay .moves-444 { font-size: calc(clamp(15px, 1.8vw, 18px) * var(--scr-scale, 1)); }
+.scramble-overlay :is(.moves-444, .moves-555, .moves-sq1) { font-size: calc(clamp(15px, 1.8vw, 18px) * var(--scr-scale, 1)); }
+.scramble-overlay :is(.moves-666, .moves-777) { font-size: calc(clamp(13px, 1.5vw, 16px) * var(--scr-scale, 1)); }
+.scramble-overlay .moves-minx { font-size: calc(clamp(11px, 3.1vw, 16px) * var(--scr-scale, 1)); }
 .overlay-actions { display: flex; align-items: center; gap: 10px; }
 .text-size { display: flex; height: 36px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
 .text-size button { width: 42px; height: 100%; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; font-weight: 600; line-height: 1; display: grid; place-items: center; }
@@ -1073,8 +1079,8 @@ body.solving .splits-badge { display: none; }
 .link-btn:disabled { color: var(--muted); text-decoration: none; }
 .ph-4 { background: color-mix(in srgb, var(--ink) 45%, var(--surface)); }
 .ph-5 { background: color-mix(in srgb, var(--ink) 25%, var(--surface)); }
-.split-puzzles { align-self: flex-start; margin-top: 10px; }
-.split-puzzles button { position: relative; padding: 5px 12px; font-size: 13px; }
+.split-puzzles { display: inline-grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-self: flex-start; margin-top: 10px; }
+.split-puzzles button { position: relative; padding: 5px 10px; font-size: 13px; }
 .split-dot { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--ready); }
 .split-setting .split-setting-head { margin-top: 10px; }
 .split-setting .split-setting-head b { font-size: 14px; }

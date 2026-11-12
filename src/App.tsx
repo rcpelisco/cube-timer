@@ -11,6 +11,7 @@ import { callOut, inspectionCallsPref, unlockSpeech } from "./lib/inspectionCall
 import { useTimer } from "./hooks/useTimer";
 import { useSessions } from "./hooks/useSessions";
 import { useScramble } from "./hooks/useScramble";
+import { scrambleKind } from "./lib/scramble";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { useFocusMode } from "./hooks/useFocusMode";
 import { useTimerBgLayer } from "./hooks/useTimerBg";
@@ -281,8 +282,8 @@ export default function App() {
           <div className="scramble-text">
             <span className="label">
               Scramble · {PUZZLES[puzzle].label}
-              {" · "}{scramble && !scramble.randomState ? "random-move" : PUZZLES[puzzle].wca ? "WCA random-state" : "random-state"}
-              {puzzle !== "fto" && " · white top, green front"}
+              {" · "}{scrambleKind(puzzle, scramble)}
+              {PUZZLES[puzzle].cube && " · white top, green front"}
             </span>
             {scramble
               ? <span className={`moves moves-${puzzle}`}>{scramble.moves}</span>

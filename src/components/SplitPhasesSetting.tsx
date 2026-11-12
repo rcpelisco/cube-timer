@@ -25,7 +25,7 @@ export function SplitPhasesSetting({ puzzle: sessionPuzzle }: { puzzle: PuzzleId
         {PUZZLE_ORDER.map(p => (
           <button key={p} type="button" role="tab" aria-selected={puzzle === p} className={puzzle === p ? "on" : ""}
             aria-label={`${PUZZLES[p].label}${withSplits.includes(p) ? ", split timing on" : ""}`} onClick={() => setPuzzle(p)}>
-            {PUZZLES[p].label}{withSplits.includes(p) && <i className="split-dot" aria-hidden="true" />}
+            {PUZZLES[p].short}{withSplits.includes(p) && <i className="split-dot" aria-hidden="true" />}
           </button>
         ))}
       </div>

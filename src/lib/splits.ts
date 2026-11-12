@@ -17,6 +17,14 @@ export const PHASE_PRESETS: Record<PuzzleId, { label: string; names: string[] }[
   ],
   "222": [{ label: "Face / LL", names: ["First face", "Last layer"] }],
   "444": [{ label: "Reduction", names: ["Centers", "Edges", "3×3"] }],
+  "555": [{ label: "Reduction", names: ["Centers", "Edges", "3×3"] }],
+  "666": [{ label: "Reduction", names: ["Centers", "Edges", "3×3"] }],
+  "777": [{ label: "Reduction", names: ["Centers", "Edges", "3×3"] }],
+  pyram: [{ label: "V / LL", names: ["V", "Last layer"] }],
+  skewb: [{ label: "Layer / LL", names: ["First layer", "Last layer"] }],
+  minx: [{ label: "S2L / LL", names: ["Star", "F2L", "S2L", "Last layer"] }],
+  sq1: [{ label: "CSP", names: ["Cube shape", "Pieces", "Parity"] }],
+  clock: [{ label: "Sides", names: ["Front", "Back"] }],
   fto: [],
 };
 

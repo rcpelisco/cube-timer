@@ -25,6 +25,14 @@ function puzzleFor(scrType: unknown): PuzzleId | null {
   if (t.startsWith("333")) return "333";
   if (t.startsWith("222")) return "222";
   if (t.startsWith("444")) return "444";
+  if (t.startsWith("555")) return "555";
+  if (t.startsWith("666")) return "666";
+  if (t.startsWith("777")) return "777";
+  if (t.startsWith("pyr")) return "pyram";
+  if (t.startsWith("skb")) return "skewb";
+  if (t.startsWith("mgm") || t === "minx") return "minx";
+  if (t.startsWith("sq")) return "sq1";
+  if (t.startsWith("clk")) return "clock";
   if (t === "fto") return "fto";
   return null;
 }
@@ -53,7 +61,10 @@ const solveKey = (s: Solve) => `${Math.round(s.at / 1000)}:${s.t}`;
 
 // Export every session as a csTimer file (the same format importCsTimer reads), so it can be
 // imported into csTimer, or back into this app on another device.
-const SCR_TYPE: Record<PuzzleId, string> = { "333": "333", "222": "222so", "444": "444wca", fto: "fto" };
+const SCR_TYPE: Record<PuzzleId, string> = {
+  "333": "333", "222": "222so", "444": "444wca", "555": "555wca", "666": "666wca", "777": "777wca",
+  pyram: "pyrso", skewb: "skbso", minx: "mgmp", sq1: "sqrs", clock: "clkwca", fto: "fto",
+};
 
 export function exportCsTimer(sessions: Session[]): string {
   const data: Record<string, unknown> = {};

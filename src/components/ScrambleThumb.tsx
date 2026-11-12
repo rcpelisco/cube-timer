@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { PUZZLES, type PuzzleId } from "../lib/puzzles";
+import { aspectStyle, PUZZLES, type PuzzleId } from "../lib/puzzles";
 import { ScramblePreview } from "./ScramblePreview";
 
 const FLY_MS = 320, BACK_MS = 240;
@@ -38,7 +38,7 @@ export function ScrambleThumb({ puzzle, moves }: { puzzle: PuzzleId; moves: stri
     <>
       <button type="button" className="thumb-btn dimmable" disabled={!moves} aria-label="Show the scrambled state full screen"
         onClick={() => setOpen(true)}>
-        <div ref={thumb} className="thumb-pic">
+        <div ref={thumb} className="thumb-pic" style={aspectStyle(puzzle)}>
           <ScramblePreview className="scramble-thumb" puzzle={puzzle} moves={moves} />
         </div>
         <svg className="thumb-expand" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
@@ -126,7 +126,7 @@ function ScrambleOverlay({ puzzle, moves, thumb, onClosed }: {
           <button type="button" className="overlay-close" aria-label="Close" onClick={e => { e.stopPropagation(); close(); }}>✕</button>
         </div>
       </div>
-      <div ref={pic} className="zoom-pic">
+      <div ref={pic} className="zoom-pic" style={aspectStyle(puzzle)}>
         <ScramblePreview className="scramble-zoom" puzzle={puzzle} moves={moves} />
       </div>
       <p className={`moves moves-${puzzle}`}>{moves}</p>

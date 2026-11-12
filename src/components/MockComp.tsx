@@ -71,7 +71,7 @@ export function MockCompSetup({ puzzle, past, onStart, onHistory, onClose }: {
   const here = past.filter(p => p.puzzle === puzzle);
   // Starts from the settings of your last round on this puzzle.
   const lastHere = here[0]?.round;
-  const [format, setFormat] = useState<CompFormat>(lastHere?.format ?? "ao5");
+  const [format, setFormat] = useState<CompFormat>(lastHere?.format ?? (PUZZLES[puzzle].mo3 ? "mo3" : "ao5"));
   const [cutoff, setCutoff] = useState(lastHere?.cutoff ? fmt(lastHere.cutoff) : "");
   const [limit, setLimit] = useState(lastHere?.limit ? fmt(lastHere.limit) : "");
   const c = parseTime(cutoff), l = parseTime(limit);
@@ -277,7 +277,7 @@ export function MockCompHistory({ sessions, puzzle: startPuzzle, onDelete, onClo
               <div className="view-tabs" role="tablist" aria-label="Puzzle">
                 {puzzles.map(p => (
                   <button key={p} type="button" role="tab" aria-selected={puzzle === p} className={puzzle === p ? "on" : ""}
-                    onClick={() => { setPuzzle(p); setConfirm(null); }}>{PUZZLES[p].label}</button>
+                    onClick={() => { setPuzzle(p); setConfirm(null); }}>{PUZZLES[p].short}</button>
                 ))}
               </div>
             )}

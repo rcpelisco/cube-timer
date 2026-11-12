@@ -192,7 +192,7 @@ function PuzzleChoice({ value, onChange, disabled }: { value: PuzzleId; onChange
       {PUZZLE_ORDER.map(p => (
         <button key={p} type="button" role="radio" aria-checked={p === value} className={p === value ? "on" : ""}
           disabled={disabled && p !== value} onClick={() => onChange(p)}>
-          {PUZZLES[p].label}
+          {PUZZLES[p].short}
         </button>
       ))}
     </div>
@@ -200,7 +200,7 @@ function PuzzleChoice({ value, onChange, disabled }: { value: PuzzleId; onChange
 }
 
 export function PuzzleBadge({ puzzle }: { puzzle: PuzzleId }) {
-  return <span className={`puzzle-badge puzzle-${puzzle}`}>{PUZZLES[puzzle].label}</span>;
+  return <span className={`puzzle-badge puzzle-${puzzle}`} title={PUZZLES[puzzle].label}>{PUZZLES[puzzle].short}</span>;
 }
 
 export function CubeGlyph() {
