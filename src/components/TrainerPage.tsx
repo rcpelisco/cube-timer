@@ -7,7 +7,8 @@ import { CROSS_COLORS } from "../lib/crossColor";
 import { fmt } from "../lib/stats";
 import { CROSS_LEVELS, type Drill } from "../lib/drills";
 import { DrillRun } from "./TrainerDrill";
-import { addTime, caseScramble, caseStats, casesFor, caseWeights, loadTrainer, nextCase, saveTrainer, type TrainerState } from "../lib/trainer";
+import { addTime, caseScramble, caseStats, casesFor, caseWeights, nextCase, type TrainerState } from "../lib/trainer";
+import type { useTrainerStore } from "../hooks/useTrainerStore";
 import { useTimer } from "../hooks/useTimer";
 import { useFocusMode } from "../hooks/useFocusMode";
 import type { useAlgPrefs } from "../hooks/useAlgPrefs";
@@ -30,9 +31,9 @@ const remaining = (w: Worst) => w.ids.filter(id => w.done[id].length < REPS);
 // OLL/PLL trainer: scramble into a random case from the ones you pick, solve it with the timer, and
 // see your times per case. The case is only shown after the solve, so recognising it is part of
 // the practice.
-export function TrainerPage({ prefs: { prefs } }: { prefs: ReturnType<typeof useAlgPrefs> }) {
-  const [store, setStore] = useState<TrainerState>(loadTrainer);
-  useEffect(() => saveTrainer(store), [store]);
+export function TrainerPage({ prefs: { prefs }, trainer: { store, setStore } }: {
+  prefs: ReturnType<typeof useAlgPrefs>; trainer: ReturnType<typeof useTrainerStore>;
+}) {
   const { statuses, cross } = prefs;
 
   const all = casesFor(store.set);

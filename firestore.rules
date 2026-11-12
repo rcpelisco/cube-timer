@@ -7,6 +7,7 @@ service cloud.firestore {
     //   users/{uid}                 { layout, inspection, algs, order, updatedAt }
     //   users/{uid}/sessions/{id}   { name, createdAt, chunks, puzzle?, cube?, goal?, rounds? }
     //   users/{uid}/chunks/{id}_{k} { sid, k, solves: [ up to 1000 solves ] }
+    //   users/{uid}/trainer/times   { times: { case: [ms…] }, timesAt: { case: ms } }
     //
     // Anything else (other fields, other collections, oversized lists) is refused, so an account
     // can't be used to dump arbitrary data. The limits sit well above what the app writes.
@@ -62,6 +63,14 @@ service cloud.firestore {
         && d.solves is list && d.solves.size() <= 1000;
     }
 
+    // Trainer times: up to 50 per case, and a few hundred cases at most (the document's 1 MiB limit
+    // bounds the lists inside).
+    function validTrainer(d) {
+      return d.keys().hasOnly(['times', 'timesAt'])
+        && d.times is map && d.times.size() <= 500
+        && d.timesAt is map && d.timesAt.size() <= 500;
+    }
+
     match /users/{uid} {
       allow read, delete: if owner(uid);
       allow create, update: if owner(uid) && validUser(request.resource.data);
@@ -73,6 +82,10 @@ service cloud.firestore {
       match /chunks/{id} {
         allow read, delete: if owner(uid);
         allow create, update: if owner(uid) && validChunk(id, request.resource.data);
+      }
+      match /trainer/{id} {
+        allow read, delete: if owner(uid) && id == 'times';
+        allow create, update: if owner(uid) && id == 'times' && validTrainer(request.resource.data);
       }
     }
   }

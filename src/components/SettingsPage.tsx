@@ -143,7 +143,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
               ? <p className="setting-note" role="status">Your account and its cloud data were deleted. Your solves are still on this device.</p>
               : deleted === "partial"
                 ? <p className="account-error" role="alert">Your cloud data was deleted, but your sign-in record couldn't be. Sign in and use Delete account again to finish.</p>
-                : <p className="setting-note">Sign in to sync your solves, sessions and algorithm progress between devices.</p>}
+                : <p className="setting-note">Sign in to sync your solves, sessions, algorithm progress and Trainer times between devices.</p>}
             <button type="button" className="google wide" onClick={() => { setDeleted(null); onSignIn(); }}><GoogleMark /> Sign in with Google</button>
             {error && <p className="account-error" role="alert">{error}</p>}
           </>
@@ -165,7 +165,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
                 <button type="button" className="wide" disabled={sync !== "synced"} onClick={onSignOutAndClear}>Sign out and remove from this device</button>
                 <p className="setting-note">
                   {sync === "synced"
-                    ? "On a shared device: also removes your solves, sessions, algorithm progress and Trainer times from this device. Your synced data stays in your account; Trainer times are only kept on this device."
+                    ? "On a shared device: also removes your solves, sessions, algorithm progress and Trainer times from this device. They stay in your account."
                     : "Available once everything has synced."}
                 </p>
               </>
@@ -188,9 +188,9 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
         {enabled && (
           <>
             <p className="setting-note">
-              If you sign in, your Google name, email and photo, plus your solves, sessions and algorithm progress,
-              are stored with Google Firebase so they can sync. Only your account can read them. Trainer times
-              and appearance settings stay on this device.
+              If you sign in, your Google name, email and photo, plus your solves, sessions, algorithm progress
+              and Trainer times, are stored with Google Firebase so they can sync. Only your account can read them.
+              Appearance and Trainer settings stay on this device.
             </p>
             <p className="setting-note">
               Delete account (under Account, once signed in) removes them and your sign-in record from Firebase;

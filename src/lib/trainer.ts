@@ -67,13 +67,14 @@ export async function caseScramble(alg: string, cross: CrossColor, set: AlgSet =
   return solution.invert().toString().replace(/2'/g, "2");
 }
 
-// ---------- Settings and times (this device) ----------
+// ---------- Settings (this device) and times (synced) ----------
 
 export interface TrainerState {
   set: AlgSet;
   pool: LearnStatus[];                      // which learning statuses to practise
   picked: Partial<Record<AlgSet, string[]>>; // chosen case ids per set; missing = every case
   times: Record<string, number[]>;          // ms per case id (or drillKey), oldest first
+  timesAt: Record<string, number>;          // when each case's times last changed (ms); 0 or missing: before this was kept
   drill: Drill | null;                      // last layer or cross practice instead of cases
   level: CrossLevel;                        // cross difficulty
   plan: boolean;                            // 15 s planning time before a cross
@@ -90,16 +91,52 @@ export function loadTrainer(): TrainerState {
       const picked = v.picked && typeof v.picked === "object" ? v.picked : {};
       return {
         set: v.set, pool: v.pool, picked, times: v.times,
+        timesAt: v.timesAt && typeof v.timesAt === "object" ? v.timesAt : {},
         drill: isDrill(v.drill) ? v.drill : null, level: isCrossLevel(v.level) ? v.level : "any", plan: v.plan !== false,
         focus: v.focus !== false,
       };
     }
   } catch { /* fall through */ }
-  return { set: "OLL", pool: ["learning", "learned"], picked: {}, times: {}, drill: null, level: "any", plan: true, focus: true };
+  return { set: "OLL", pool: ["learning", "learned"], picked: {}, times: {}, timesAt: {}, drill: null, level: "any", plan: true, focus: true };
 }
 
 export function saveTrainer(s: TrainerState) {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ }
+}
+
+// The times are what syncs between devices (hooks/useCloudSync.ts); the rest of the Trainer's
+// settings stay on each device.
+export type TrainerTimes = Pick<TrainerState, "times" | "timesAt">;
+export const NO_TRAINER_TIMES: TrainerTimes = { times: {}, timesAt: {} };
+
+// Accepts what's stored in the cloud only if it has the right shape, dropping anything malformed.
+export function readCloudTrainer(v: unknown): TrainerTimes | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Partial<Record<keyof TrainerTimes, unknown>>;
+  if (!o.times || typeof o.times !== "object") return null;
+  const times: TrainerTimes["times"] = {}, timesAt: TrainerTimes["timesAt"] = {};
+  const at = (o.timesAt && typeof o.timesAt === "object" ? o.timesAt : {}) as Record<string, unknown>;
+  for (const [k, list] of Object.entries(o.times as Record<string, unknown>)) {
+    if (!Array.isArray(list)) continue;
+    times[k] = list.filter((t): t is number => typeof t === "number" && t > 0).slice(-KEEP);
+    timesAt[k] = typeof at[k] === "number" ? at[k] : 0;
+  }
+  return { times, timesAt };
+}
+
+// This device's times merged with the cloud's, case by case: the copy changed most recently wins,
+// so a deleted time stays deleted. Times from before changes were dated (0 on both sides) are
+// combined, dated now so other devices take the combined list rather than adding theirs again.
+export function mergeTrainerTimes(remote: TrainerTimes | null, local: TrainerTimes): TrainerTimes {
+  if (!remote) return local;
+  const times = { ...remote.times }, timesAt = { ...remote.timesAt };
+  const now = Date.now();
+  for (const [k, l] of Object.entries(local.times)) {
+    const r = remote.times[k], la = local.timesAt[k] ?? 0, ra = remote.timesAt[k] ?? 0;
+    if (!r || la > ra) { times[k] = l; timesAt[k] = la; }
+    else if (la === 0 && ra === 0 && JSON.stringify(l) !== JSON.stringify(r)) { times[k] = [...r, ...l].slice(-KEEP); timesAt[k] = now; }
+  }
+  return { times, timesAt };
 }
 
 export const addTime = (times: number[] = [], t: number) => [...times, t].slice(-KEEP);

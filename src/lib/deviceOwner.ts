@@ -1,5 +1,6 @@
 import type { Session } from "./sessions";
 import type { AlgPrefs } from "./algPrefs";
+import type { TrainerTimes } from "./trainer";
 
 // Which account the solves on this device belong to, so signing in with a different account
 // doesn't upload someone else's history into it (say, on a shared computer). Set each time sync
@@ -49,14 +50,22 @@ export function forgetAccount(uid: string) {
 // after signing out, say) is put aside here instead of being lost or uploaded to the wrong account,
 // and merged back the next time they sign in on this device.
 const stashKey = (uid: string) => `cubeTimer.unsynced.${uid}`;
-interface Stash { sessions: Session[]; algs: AlgPrefs | null }
+interface Stash { sessions: Session[]; algs: AlgPrefs | null; trainer: TrainerTimes | null }
 
-export function stashUnsynced(uid: string, sessions: Session[], algs: AlgPrefs) {
+export function stashUnsynced(uid: string, sessions: Session[], algs: AlgPrefs, trainer: TrainerTimes) {
   const since = readSyncedAt(uid);
   const newer = sessions.filter(s => s.createdAt > since || s.solves.some(x => x.at > since) || s.rounds?.some(r => r.startAt > since));
-  const stash: Stash = { sessions: newer, algs: algs.updatedAt > since ? algs : null };
+  // Trainer times: cases changed since the last sync, and undated ones (from before Trainer times
+  // synced, so never uploaded).
+  const cases = Object.keys(trainer.times).filter(k => !trainer.timesAt[k] || trainer.timesAt[k] > since);
+  const stash: Stash = {
+    sessions: newer, algs: algs.updatedAt > since ? algs : null,
+    trainer: cases.length
+      ? { times: Object.fromEntries(cases.map(k => [k, trainer.times[k]])), timesAt: Object.fromEntries(cases.map(k => [k, trainer.timesAt[k] ?? 0])) }
+      : null,
+  };
   try {
-    if (stash.sessions.length || stash.algs) localStorage.setItem(stashKey(uid), JSON.stringify(stash));
+    if (stash.sessions.length || stash.algs || stash.trainer) localStorage.setItem(stashKey(uid), JSON.stringify(stash));
   } catch { /* ignore: storage full or unavailable */ }
 }
 
@@ -65,13 +74,13 @@ export function takeStash(uid: string): Stash {
   try {
     const raw = JSON.parse(localStorage.getItem(stashKey(uid)) || "null") as Partial<Stash> | null;
     localStorage.removeItem(stashKey(uid));
-    if (raw && Array.isArray(raw.sessions)) return { sessions: raw.sessions, algs: raw.algs ?? null };
+    if (raw && Array.isArray(raw.sessions)) return { sessions: raw.sessions, algs: raw.algs ?? null, trainer: raw.trainer ?? null };
   } catch { /* ignore */ }
-  return { sessions: [], algs: null };
+  return { sessions: [], algs: null, trainer: null };
 }
 
 // Everything on this device that belongs to whoever uses it: solves, sessions, mock rounds,
-// algorithm progress and sync bookkeeping. Look-and-feel settings stay.
+// algorithm progress, the Trainer (times and its settings) and sync bookkeeping. Look-and-feel settings stay.
 export function isPersonalKey(k: string) {
   return k.startsWith("cubeTimer.syncedAt.") || k.startsWith("cubeTimer.unsynced.") || [
     OWNER, "cubeTimer.v2", "cubeTimer.v1", "cubeTimer.mockRound", "cubeTimer.mockRounds",

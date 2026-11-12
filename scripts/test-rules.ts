@@ -49,6 +49,9 @@ await check("delete everything at once (Delete cloud data)", () => {
   for (const p of ["users/me/sessions/abc123", `users/me/sessions/${SID}`, `users/me/chunks/${SID}_0`, "users/me"]) b.delete(doc(me, p));
   return ok(b.commit());
 });
+const trainer = { times: { "oll-1": [1500, 1420], "LL:any": [8000] }, timesAt: { "oll-1": 1794502658041, "LL:any": 0 } };
+await check("Trainer times", () => ok(setDoc(doc(me, "users/me/trainer/times"), trainer)));
+await check("read and delete own Trainer times", () => ok(getDoc(doc(me, "users/me/trainer/times")).then(() => deleteDoc(doc(me, "users/me/trainer/times")))));
 await check("put the account back for the checks below", () => ok(setDoc(doc(me, "users/me"), user)));
 
 console.log("Other people's data is off limits:");
@@ -58,6 +61,8 @@ await check("another user can't read", () => no(getDoc(doc(other, "users/me"))))
 await check("another user can't list chunks", () => no(getDocs(collection(other, "users/me/chunks"))));
 await check("another user can't write", () => no(setDoc(doc(other, "users/me/chunks", `${SID}_5`), { sid: SID, k: 5, solves: [] })));
 await check("another user can't delete", () => no(deleteDoc(doc(other, "users/me"))));
+await check("another user can't read Trainer times", () => no(getDoc(doc(other, "users/me/trainer/times"))));
+await check("another user can't write Trainer times", () => no(setDoc(doc(other, "users/me/trainer/times"), trainer)));
 
 console.log("Dumping data is refused:");
 await check("a collection the app doesn't use", () => no(setDoc(doc(me, "users/me/junk/a"), { blob: "x" })));
@@ -76,6 +81,10 @@ await check("an extra field on the user document", () => no(setDoc(doc(me, "user
 await check("a made-up updatedAt", () => no(setDoc(doc(me, "users/me"), { ...user, updatedAt: 5 })));
 await check("501 sessions in the order list", () => no(setDoc(doc(me, "users/me"), { ...user, order: Array.from({ length: 501 }, (_, i) => `s${i}`) })));
 await check("an oversized statuses map", () => no(setDoc(doc(me, "users/me"), { ...user, algs: { ...user.algs, statuses: Object.fromEntries(Array.from({ length: 1001 }, (_, i) => [`c${i}`, "learned"])) } })));
+await check("a Trainer document other than times", () => no(setDoc(doc(me, "users/me/trainer/other"), trainer)));
+await check("an extra field on Trainer times", () => no(setDoc(doc(me, "users/me/trainer/times"), { ...trainer, blob: "x" })));
+await check("Trainer times that aren't a map", () => no(setDoc(doc(me, "users/me/trainer/times"), { times: "x".repeat(1000), timesAt: {} })));
+await check("Trainer times for 501 cases", () => no(setDoc(doc(me, "users/me/trainer/times"), { times: Object.fromEntries(Array.from({ length: 501 }, (_, i) => [`c${i}`, [1]])), timesAt: {} })));
 
 await env.cleanup();
 console.log(failed ? `\n${failed} check(s) failed` : "\nAll checks passed");

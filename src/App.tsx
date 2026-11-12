@@ -18,6 +18,7 @@ import { useTimerBgLayer } from "./hooks/useTimerBg";
 import { useView } from "./hooks/useView";
 import { usePageTransition } from "./hooks/usePageTransition";
 import { useAlgPrefs } from "./hooks/useAlgPrefs";
+import { useTrainerStore } from "./hooks/useTrainerStore";
 import { useAuth } from "./hooks/useAuth";
 import { useCloudSync } from "./hooks/useCloudSync";
 import { Header } from "./components/Header";
@@ -100,9 +101,13 @@ export default function App() {
   useEffect(() => save({ sessions: sessions.sessions, currentId: current.id, inspection }), [sessions.sessions, current.id, inspection]);
 
   const algPrefs = useAlgPrefs();
+  const trainer = useTrainerStore();
+  const { times: trainerTimes, timesAt: trainerTimesAt } = trainer.store;
+  const trainerSync = useMemo(() => ({ times: trainerTimes, timesAt: trainerTimesAt }), [trainerTimes, trainerTimesAt]);
   const auth = useAuth();
   const { status: sync, deleteCloud } = useCloudSync({
     user: auth.user, sessions: sessions.sessions, inspection, algPrefs: algPrefs.prefs,
+    trainer: trainerSync, setTrainer: trainer.replaceTimes,
     setSessions: sessions.setSessions, setInspection, setAlgPrefs: algPrefs.replace,
   });
 
@@ -327,7 +332,7 @@ export default function App() {
 
       <Suspense fallback={null}>
         {view === "algs" && <AlgorithmsPage prefs={algPrefs} />}
-        {view === "train" && <TrainerPage prefs={algPrefs} />}
+        {view === "train" && <TrainerPage prefs={algPrefs} trainer={trainer} />}
         {view === "settings" && (
           <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
             solveActions={{ solves, onClear: () => setSolves(() => []) }} />

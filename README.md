@@ -17,7 +17,7 @@ Speedcubing timer for the 3×3, built as an installable PWA (Vite + React + Type
   pick your own main), setups, a 3D cube that plays them, group/status filters, Learning/Learned
   status, and a cross-color setting that recolors the diagrams.
 - Solves are saved in the browser (localStorage). Works offline once loaded. Signed in with Google, solves,
-  sessions and algorithm progress sync between devices.
+  sessions, algorithm progress and Trainer times sync between devices.
 
 ## Develop
 

@@ -3,6 +3,7 @@
 //   users/{uid}                    { layout: 2, inspection, algs, order: [sessionId…], updatedAt }
 //   users/{uid}/sessions/{id}      { name, createdAt, puzzle?, cube?, goal?, rounds?, chunks }
 //   users/{uid}/chunks/{id}_{k}    { sid, k, solves: [ …up to CHUNK solves ] }
+//   users/{uid}/trainer/times      { times: { caseId: [ms…] }, timesAt: { caseId: ms } }
 //
 // Chunk k holds solves k·CHUNK … (k+1)·CHUNK−1 of the session, so adding a solve rewrites only the
 // last chunk, and a session can hold any number of solves.
@@ -10,16 +11,18 @@
 // Before layout 2, everything sat in users/{uid} as { sessions: Session[], inspection, algs }.
 // fromDocs still reads that, and the next write moves it into the layout above.
 //
-// Paths here are relative to users/{uid}: "user", "sessions/{id}", "chunks/{id}_{k}".
+// Paths here are relative to users/{uid}: "user", "sessions/{id}", "chunks/{id}_{k}", "trainer/times".
 
 import { mergeSessions, type Session } from "./sessions";
 import type { Solve } from "./stats";
 import { readCloudAlgPrefs, type AlgPrefs } from "./algPrefs";
 import { readRecord, type RoundRecord } from "./mockComp";
+import { readCloudTrainer, type TrainerTimes } from "./trainer";
 
 export const CHUNK = 1000;
+export const TRAINER = "trainer/times";
 
-export interface SyncState { sessions: Session[]; inspection: boolean; algs: AlgPrefs }
+export interface SyncState { sessions: Session[]; inspection: boolean; algs: AlgPrefs; trainer: TrainerTimes }
 
 // JSON with object keys sorted, so the same data always compares equal whatever order Firestore
 // returns map fields in.
@@ -47,6 +50,7 @@ export function toDocs(state: SyncState): Map<string, Doc> {
       docs.set(`chunks/${s.id}_${k}`, { sid: s.id, k, solves: s.solves.slice(k * CHUNK, (k + 1) * CHUNK) });
     }
   }
+  if (Object.keys(state.trainer.times).length) docs.set(TRAINER, { times: state.trainer.times, timesAt: state.trainer.timesAt });
   docs.set("user", { layout: 2, inspection: state.inspection, algs: state.algs, order: state.sessions.map(s => s.id) });
   return docs;
 }
@@ -56,13 +60,14 @@ export interface Remote {
   sessions: Session[] | null; // null: nothing stored yet
   inspection: boolean;
   algs: AlgPrefs | null;
+  trainer: TrainerTimes | null; // null: none stored yet
   legacy: boolean; // still in the old single-document layout
   complete: boolean; // every chunk the session documents mention is present
 }
 
 // Rebuild the state from the user document plus every session and chunk document.
-export function fromDocs(user: Doc | null, sessionDocs: [string, Doc][], chunkDocs: Doc[]): Remote {
-  const base = { exists: !!user, inspection: !!user?.inspection, algs: readCloudAlgPrefs(user?.algs) };
+export function fromDocs(user: Doc | null, sessionDocs: [string, Doc][], chunkDocs: Doc[], trainerDoc: Doc | null = null): Remote {
+  const base = { exists: !!user, inspection: !!user?.inspection, algs: readCloudAlgPrefs(user?.algs), trainer: readCloudTrainer(trainerDoc) };
   if (!user) return { ...base, sessions: null, legacy: false, complete: true };
   const legacySessions = Array.isArray(user.sessions) ? (user.sessions as Session[]) : null;
   if (user.layout !== 2 && !sessionDocs.length) return { ...base, sessions: legacySessions, legacy: true, complete: true };
