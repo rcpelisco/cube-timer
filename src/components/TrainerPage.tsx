@@ -21,6 +21,12 @@ const COLOR_NAME: Record<string, string> = Object.fromEntries(CROSS_COLORS.map(c
 
 interface Attempt { c: AlgCase; scramble: string | null; failed?: boolean }
 
+// "Drill my worst": the slowest cases you've tried, a few times each, then a before and after.
+const WORST = 5, REPS = 3;
+interface Worst { ids: string[]; before: Record<string, number | null>; done: Record<string, number[]> }
+interface WorstResult { rows: { c: AlgCase; before: number | null; after: number }[] }
+const remaining = (w: Worst) => w.ids.filter(id => w.done[id].length < REPS);
+
 // OLL/PLL trainer: scramble into a random case from the ones you pick, solve it with the timer, and
 // see your times per case. The case is only shown after the solve, so recognising it is part of
 // the practice.
@@ -138,6 +144,11 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
   const crossInfo = CROSS_COLORS.find(c => c.id === cross)!;
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [last, setLast] = useState<{ c: AlgCase; t: number } | null>(null);
+  const [worst, setWorstState] = useState<Worst | null>(null);
+  const [worstResult, setWorstResult] = useState<WorstResult | null>(null);
+  // Kept in a ref too, so picking the next case right after a solve sees the update.
+  const worstRef = useRef<Worst | null>(null);
+  const setWorst = useCallback((w: Worst | null) => { worstRef.current = w; setWorstState(w); }, []);
   const request = useRef(0);
 
   const load = useCallback((c: AlgCase | null) => {
@@ -159,12 +170,16 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
   useEffect(() => { timesRef.current = times; }, [times]);
   const focusRef = useRef(focus);
   useEffect(() => { focusRef.current = focus; }, [focus]);
-  // The next case: favouring slow and little-practised ones when that's on.
+  // The next case: during a worst-cases drill, one of those that still needs reps; otherwise
+  // favouring slow and little-practised ones when that's on.
   const pickNext = useCallback((previous?: string, t = timesRef.current) => {
     const p = poolRef.current;
+    const w = worstRef.current;
+    if (w) { const left = remaining(w); return nextCase(p.filter(c => left.includes(c.id)), previous); }
     return nextCase(p, previous, focusRef.current ? caseWeights(p, t) : undefined);
   }, []);
-  useEffect(() => { loadRef.current(pickNext()); }, [poolKey, pickNext]);
+  // A new pool (set, statuses, picked cases, cross color) ends a drill and starts afresh.
+  useEffect(() => { setWorst(null); loadRef.current(pickNext()); }, [poolKey, pickNext, setWorst]);
 
   const attemptRef = useRef(attempt);
   useEffect(() => { attemptRef.current = attempt; }, [attempt]);
@@ -173,10 +188,22 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
     if (!a?.scramble) return;
     setStore(s => ({ ...s, times: { ...s.times, [a.c.id]: addTime(s.times[a.c.id], t) } }));
     setLast({ c: a.c, t });
+    const w = worstRef.current;
+    if (w?.ids.includes(a.c.id) && w.done[a.c.id].length < REPS) {
+      const next = { ...w, done: { ...w.done, [a.c.id]: [...w.done[a.c.id], t] } };
+      if (remaining(next).length) setWorst(next);
+      else {
+        setWorst(null);
+        setWorstResult({ rows: next.ids.map(id => ({
+          c: poolRef.current.find(c => c.id === id)!, before: next.before[id],
+          after: next.done[id].reduce((x, y) => x + y, 0) / next.done[id].length,
+        })).filter(r => r.c) });
+      }
+    }
     // Weighed with this time included, so a slow solve makes the case come up sooner.
     const now = timesRef.current;
     loadRef.current(pickNext(a.c.id, { ...now, [a.c.id]: addTime(now[a.c.id], t) }));
-  }, [setStore, pickNext]);
+  }, [setStore, pickNext, setWorst]);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const timer = useTimer({ stageRef, inspection: false, onFinish, enabled: !!attempt?.scramble });
@@ -186,8 +213,29 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
   const deleteLast = () => {
     if (!last) return;
     setStore(s => ({ ...s, times: { ...s.times, [last.c.id]: (s.times[last.c.id] ?? []).slice(0, -1) } }));
+    const w = worstRef.current;
+    if (w?.done[last.c.id]?.length) setWorst({ ...w, done: { ...w.done, [last.c.id]: w.done[last.c.id].slice(0, -1) } });
     setLast(null);
   };
+
+  // The slowest cases you've tried, by their recent average.
+  const tried = pool
+    .map(c => ({ c, avg: caseStats(times[c.id]).avg }))
+    .filter((r): r is { c: AlgCase; avg: number } => r.avg != null)
+    .sort((a, b) => b.avg - a.avg);
+  const worstCount = Math.min(WORST, tried.length);
+  const canDrill = !worst && tried.length >= 2 && pool.length > 2;
+  const startWorst = () => {
+    const picks = tried.slice(0, worstCount);
+    setWorstResult(null);
+    setWorst({
+      ids: picks.map(r => r.c.id),
+      before: Object.fromEntries(picks.map(r => [r.c.id, r.avg])),
+      done: Object.fromEntries(picks.map(r => [r.c.id, []])),
+    });
+    load(pickNext());
+  };
+  const stopWorst = () => { setWorst(null); load(pickNext(attempt?.c.id)); };
 
   const shown = timer.display ?? (last ? fmt(last.t) : "0.00");
   const act = isTouch ? "Touch and hold" : <>Hold <kbd>Space</kbd></>;
@@ -195,7 +243,7 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
   const stageClass = ["stage", timer.holding && !timer.ready && "holding", timer.ready && "ready"].filter(Boolean).join(" ");
 
   // Slowest first, so the cases that need work are at the top.
-  const weights = focus ? caseWeights(pool, times) : null;
+  const weights = focus && !worst ? caseWeights(pool, times) : null;
   const weightSum = weights ? weights.reduce((a, b) => a + b, 0) : 0;
   const rows = pool
     .map((c, i) => ({ c, ...caseStats(times[c.id]), chance: weights ? weights[i] / weightSum : null }))
@@ -204,8 +252,49 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
   const front = COLOR_NAME[crossInfo.faces.F];
 
 
+  const worstTotal = worst ? worst.ids.length * REPS : 0;
+  const worstDone = worst ? worst.ids.reduce((n, id) => n + worst.done[id].length, 0) : 0;
+
   return (
         <>
+          {worst && (
+            <div className="panel worst-bar dimmable" role="status">
+              <div className="worst-head">
+                <b>Drilling your {worst.ids.length} slowest · {worstDone} of {worstTotal}</b>
+                <button type="button" className="link-btn" onClick={stopWorst}>Stop</button>
+              </div>
+              <div className="worst-cases">
+                {worst.ids.map(id => {
+                  const c = pool.find(x => x.id === id);
+                  const n = worst.done[id].length;
+                  return c && <span key={id} className={n >= REPS ? "done" : ""}>{c.name} <i>{n}/{REPS}</i></span>;
+                })}
+              </div>
+            </div>
+          )}
+          {worstResult && !worst && (
+            <div className="panel worst-result dimmable">
+              <div className="worst-head">
+                <h2>Worst cases drill · done</h2>
+                <button type="button" className="overlay-close" aria-label="Close" onClick={() => setWorstResult(null)}>✕</button>
+              </div>
+              <table>
+                <thead><tr><th>Case</th><th>Before</th><th>Drill</th><th>Change</th></tr></thead>
+                <tbody>
+                  {worstResult.rows.map(r => {
+                    const d = r.before != null ? r.after - r.before : null;
+                    return (
+                      <tr key={r.c.id}>
+                        <td>{r.c.name}</td><td>{fmt(r.before)}</td><td>{fmt(r.after)}</td>
+                        <td className={d == null ? "" : d < 0 ? "faster" : "slower"}>{d == null ? "–" : `${d < 0 ? "−" : "+"}${fmt(Math.abs(d))}`}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <small>Before is each case's average of 5 when the drill started; Drill is the mean of its {REPS} drill times.</small>
+            </div>
+          )}
           <div className="scramble dimmable">
             <div className="scramble-text">
               <span className="label">
@@ -245,12 +334,16 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
           )}
 
           <div className="panel trainer-stats dimmable">
-            <h2>Your cases · slowest first</h2>
+            <div className="worst-head">
+              <h2>Your cases · slowest first</h2>
+              {canDrill && <button type="button" className="link-btn" onClick={startWorst}
+                title={`The ${worstCount} slowest cases you've tried, ${REPS} times each`}>Drill my worst {worstCount}</button>}
+            </div>
             <table>
               <thead><tr><th>Case</th><th>Avg 5</th><th>Best</th><th>Times</th>{weights && <th title="How likely the case is to come up next">Odds</th>}</tr></thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.c.id} className={r.reps ? "" : "untried"}>
+                  <tr key={r.c.id} className={[r.reps ? "" : "untried", worst?.ids.includes(r.c.id) ? "drilling" : ""].filter(Boolean).join(" ") || undefined}>
                     <td>{r.c.name}</td><td>{fmt(r.avg)}</td><td>{fmt(r.best)}</td><td>{r.reps}</td>
                     {r.chance != null && <td className="odds">{r.chance >= 0.095 ? Math.round(r.chance * 100) : (r.chance * 100).toFixed(1)}%</td>}
                   </tr>

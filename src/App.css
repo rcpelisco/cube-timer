@@ -964,3 +964,25 @@ body.solving .today-ring { display: none; }
 .days-grid .day-met { fill: var(--surface); }
 .days-met-key { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px;
   background: radial-gradient(circle, var(--surface) 2px, var(--accent) 2.5px); }
+
+/* Trainer: drill your worst cases. */
+.link-btn { border: 0; background: none; padding: 0; font: 600 13px var(--font-ui); color: var(--accent); cursor: pointer; white-space: nowrap; }
+.link-btn:hover { text-decoration: underline; }
+.worst-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.worst-head h2 { margin: 0; }
+.worst-bar { padding: 12px 14px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.worst-bar .worst-head { margin-bottom: 8px; }
+.worst-bar .worst-head b { font-size: 14px; }
+.worst-cases { display: flex; flex-wrap: wrap; gap: 6px; }
+.worst-cases span { padding: 3px 8px; border-radius: 999px; background: var(--line); font-size: 12px; font-weight: 600; }
+.worst-cases span i { font: 500 11px var(--font-num); font-style: normal; color: var(--muted); margin-left: 2px; }
+.worst-cases span.done { background: color-mix(in srgb, var(--ready) 22%, var(--surface)); }
+.worst-result table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.worst-result th { text-align: right; font: 600 11px var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 4px 0 8px; }
+.worst-result td { text-align: right; padding: 7px 0; border-top: 1px solid var(--line); font-family: var(--font-num); }
+.worst-result th:first-child, .worst-result td:first-child { text-align: left; font-family: var(--font-ui); font-weight: 600; }
+.worst-result td.faster { color: var(--ready); }
+.worst-result td.slower { color: var(--hold); }
+.worst-result small { display: block; margin-top: 8px; color: var(--muted); font-size: 12px; }
+.trainer-stats .worst-head h2 { margin: 0; }
+.trainer-stats tr.drilling td:first-child { color: var(--accent); }
