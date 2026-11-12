@@ -29,6 +29,7 @@ import { PenaltyButtons, SolveList } from "./components/SolveList";
 import { SolveDetail } from "./components/SolveDetail";
 import { TabBar } from "./components/TabBar";
 import { QuickStats } from "./components/QuickStats";
+import { TodayRing } from "./components/TodayRing";
 import { TrainerPage } from "./components/TrainerPage";
 import { TimeDisplay } from "./components/TimeDisplay";
 import { SettingsPage } from "./components/SettingsPage";
@@ -242,6 +243,7 @@ export default function App() {
         </div>
 
         <div className={stageClass} ref={stageRef}>
+          <TodayRing sessions={sessions.sessions} />
           <TimeDisplay shown={shown} running={timer.phase === "running"} />
           {timer.phase === "running" && phases > 1 && <SplitsLine marks={timer.marks} phases={phases} puzzle={puzzle} live />}
           {!active && last?.sp && <SplitsLine marks={last.sp} t={last.t} phases={last.sp.length + 1} puzzle={puzzle} />}

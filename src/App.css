@@ -947,3 +947,20 @@ body.solving .stage .splits-line.live b { font-size: 16px; }
 .avg-add-form button { padding: 6px 12px; font-size: 13px; }
 .avg-add-form small { flex: 1 0 100%; color: var(--muted); font-size: 12px; }
 .avg-add-form small.avg-add-problem { color: var(--hold); }
+
+/* Daily target: a ring in the timer's corner, and dots on the Days chart. */
+.today-ring { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 6px; pointer-events: none; color: var(--muted); font-size: 12px; }
+.today-ring svg { width: 30px; height: 30px; }
+.today-ring .ring-track { fill: none; stroke: var(--line); stroke-width: 3.5; }
+.today-ring .ring-fill { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset 400ms ease-out; }
+.today-ring.met .ring-fill { stroke: var(--ready); }
+.today-ring .ring-tick { fill: none; stroke: var(--ready); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.today-ring span { line-height: 1.15; font: 500 13px var(--font-num); }
+.today-ring b { color: var(--ink); font-weight: 500; }
+.today-ring small { display: block; font: 11px var(--font-ui); color: var(--muted); }
+body.solving .today-ring { display: none; }
+@media (prefers-reduced-motion: reduce) { .today-ring .ring-fill { transition: none; } }
+.setting-row .segmented.targets { grid-template-columns: repeat(5, 1fr); flex-basis: 320px; }
+.days-grid .day-met { fill: var(--surface); }
+.days-met-key { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px;
+  background: radial-gradient(circle, var(--surface) 2px, var(--accent) 2.5px); }

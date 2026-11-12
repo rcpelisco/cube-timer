@@ -12,6 +12,7 @@ import { ImportCsTimer } from "./ImportCsTimer";
 import { useBoolPref } from "../lib/boolPref";
 import { inspectionCallsPref } from "../lib/inspectionCalls";
 import { PHASE_OPTIONS, usePhaseCount } from "../lib/splits";
+import { TARGET_OPTIONS, useDailyTarget } from "../lib/dailyTarget";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
 
 // Settings: timer options, algorithms, sessions (with Copy times / Clear solves on the current
@@ -29,6 +30,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   const [showTriggers, setShowTriggers] = useShowTriggers();
   const [calls, setCalls] = useBoolPref(inspectionCallsPref);
   const [phases, setPhases] = usePhaseCount();
+  const [target, setTarget] = useDailyTarget();
 
   return (
     <section className="settings">
@@ -68,6 +70,18 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
             {PHASE_OPTIONS.map(o => (
               <button key={o.n} type="button" role="radio" aria-checked={phases === o.n} className={phases === o.n ? "on" : ""}
                 onClick={() => setPhases(o.n)}>{o.label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="setting-row stacked">
+          <span>
+            <b>Daily target</b>
+            <small>Solves to aim for each day, in any session. A ring on the timer fills as you go, and the Days chart marks the days you reached it.</small>
+          </span>
+          <div className="segmented phases targets" role="radiogroup" aria-label="Daily target">
+            {TARGET_OPTIONS.map(n => (
+              <button key={n} type="button" role="radio" aria-checked={target === n} className={target === n ? "on" : ""}
+                onClick={() => setTarget(n)}>{n || "Off"}</button>
             ))}
           </div>
         </div>
