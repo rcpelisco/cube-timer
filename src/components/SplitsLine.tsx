@@ -1,5 +1,5 @@
 import { fmt } from "../lib/stats";
-import { phaseNames, phaseTimes } from "../lib/splits";
+import { namesFor, phaseTimes, usePhases } from "../lib/splits";
 import type { PuzzleId } from "../lib/puzzles";
 import { useHideTime } from "../hooks/useHideTime";
 
@@ -10,7 +10,7 @@ export function SplitsLine({ marks, t, phases, puzzle, live = false }: {
   marks: number[]; t?: number; phases: number; puzzle: PuzzleId; live?: boolean;
 }) {
   const [hide] = useHideTime();
-  const names = phaseNames(phases, puzzle);
+  const names = namesFor(phases, usePhases(puzzle));
   const times = t == null ? marks.map((m, i) => m - (i ? marks[i - 1] : 0)) : phaseTimes(marks, t);
   return (
     <div className={`splits-line${live ? " live" : ""}`} aria-live={live ? "off" : undefined}>
@@ -18,7 +18,7 @@ export function SplitsLine({ marks, t, phases, puzzle, live = false }: {
         const done = i < times.length;
         if (live && i > times.length) return null;
         return (
-          <span key={name} className={done ? "" : "now"}>
+          <span key={i} className={done ? "" : "now"}>
             {name}{done && !(live && hide) && <b>{fmt(times[i])}</b>}
           </span>
         );
@@ -29,7 +29,7 @@ export function SplitsLine({ marks, t, phases, puzzle, live = false }: {
 
 // Phase times as one bar split by share of the solve, with each phase's time below.
 export function SplitBars({ times, puzzle, label }: { times: number[]; puzzle: PuzzleId; label: string }) {
-  const names = phaseNames(times.length, puzzle);
+  const names = namesFor(times.length, usePhases(puzzle));
   const total = times.reduce((a, b) => a + b, 0) || 1;
   return (
     <div className="split-bars">
@@ -38,7 +38,7 @@ export function SplitBars({ times, puzzle, label }: { times: number[]; puzzle: P
       </div>
       <div className="split-legend">
         {names.map((n, i) => (
-          <span key={n}><i className={`ph-${i}`} />{n} <b>{fmt(times[i])}</b> <small>{Math.round((times[i] / total) * 100)}%</small></span>
+          <span key={i}><i className={`ph-${i}`} />{n} <b>{fmt(times[i])}</b> <small>{Math.round((times[i] / total) * 100)}%</small></span>
         ))}
       </div>
     </div>

@@ -11,7 +11,8 @@ import { exportFileName, saveTextFile } from "../lib/saveFile";
 import { ImportCsTimer } from "./ImportCsTimer";
 import { useBoolPref } from "../lib/boolPref";
 import { inspectionCallsPref } from "../lib/inspectionCalls";
-import { PHASE_OPTIONS, usePhaseCount } from "../lib/splits";
+import { SplitPhasesSetting } from "./SplitPhasesSetting";
+import { toPuzzle } from "../lib/puzzles";
 import { TARGET_OPTIONS, useDailyTarget } from "../lib/dailyTarget";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
 
@@ -29,7 +30,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   const [hideTime, setHideTime] = useHideTime();
   const [showTriggers, setShowTriggers] = useShowTriggers();
   const [calls, setCalls] = useBoolPref(inspectionCallsPref);
-  const [phases, setPhases] = usePhaseCount();
+  const puzzle = toPuzzle(sessions.list.find(x => x.id === sessions.currentId)?.puzzle);
   const [target, setTarget] = useDailyTarget();
 
   return (
@@ -61,18 +62,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           <input type="checkbox" className="switch" id="opt-hide-time" checked={hideTime}
             onChange={e => setHideTime(e.target.checked)} />
         </label>
-        <div className="setting-row stacked">
-          <span>
-            <b>Split timing</b>
-            <small>Press during a solve to end each phase{phases === 4 ? " (cross, F2L, OLL, PLL)" : phases === 2 ? " (F2L, last layer)" : ""}; the last press stops the timer.</small>
-          </span>
-          <div className="segmented phases" role="radiogroup" aria-label="Split timing">
-            {PHASE_OPTIONS.map(o => (
-              <button key={o.n} type="button" role="radio" aria-checked={phases === o.n} className={phases === o.n ? "on" : ""}
-                onClick={() => setPhases(o.n)}>{o.label}</button>
-            ))}
-          </div>
-        </div>
+        <SplitPhasesSetting puzzle={puzzle} />
         <div className="setting-row stacked">
           <span>
             <b>Daily target</b>

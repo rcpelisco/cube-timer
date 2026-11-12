@@ -24,13 +24,14 @@ import { ScramblePreview } from "./components/ScramblePreview";
 import { ScrambleThumb } from "./components/ScrambleThumb";
 import { TrendChart } from "./components/TrendChart";
 import { SplitsLine } from "./components/SplitsLine";
-import { usePhaseCount } from "./lib/splits";
+import { usePhases } from "./lib/splits";
 import { StatsPanel } from "./components/StatsPanel";
 import { PenaltyButtons, SolveList } from "./components/SolveList";
 import { SolveDetail } from "./components/SolveDetail";
 import { TabBar } from "./components/TabBar";
 import { QuickStats } from "./components/QuickStats";
 import { TodayRing } from "./components/TodayRing";
+import { SplitsBadge } from "./components/SplitsBadge";
 import { TrainerPage } from "./components/TrainerPage";
 import { TimeDisplay } from "./components/TimeDisplay";
 import { InspectRing } from "./components/InspectRing";
@@ -96,7 +97,8 @@ export default function App() {
   // Computers show solves and stats beside the timer, so "solves" is the timer page there.
   const showTimer = view === "timer" || (!isPhone && view === "solves");
   // The timer only listens for keys and taps while its page is showing.
-  const [phases] = usePhaseCount();
+  const phaseNames = usePhases(puzzle);
+  const phases = phaseNames.length || 1;
   const timerInspection = inspection || compLive;
   const timer = useTimer({ stageRef, inspection: timerInspection, onFinish, enabled: showTimer, phases });
   const active = timer.phase !== "idle";
@@ -294,6 +296,7 @@ export default function App() {
 
         <div className={stageClass} ref={stageRef}>
           <TodayRing sessions={sessions.sessions} />
+          <SplitsBadge names={phaseNames} />
           {timer.phase === "inspect" && <InspectRing />}
           <TimeDisplay shown={shown} running={timer.phase === "running"} />
           {timer.phase === "running" && phases > 1 && <SplitsLine marks={timer.marks} phases={phases} puzzle={puzzle} live />}
