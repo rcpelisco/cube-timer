@@ -1,5 +1,7 @@
-import { Fragment, useState } from "react";
+import { useCallback, useState } from "react";
 import { avgOf, DNF, eff, fmt, type Penalty, type Solve } from "../lib/stats";
+import type { PuzzleId } from "../lib/puzzles";
+import { SolveDetail } from "./SolveDetail";
 
 interface Props {
   solves: Solve[];
@@ -19,8 +21,13 @@ export function PenaltyButtons({ i, solve, onPenalty, onDelete, compact }: { i: 
   );
 }
 
-export function SolveList({ solves, onPenalty, onDelete }: Props) {
-  const [open, setOpen] = useState(-1);
+// Solves, newest first. Tap a row for the solve's details: scramble, picture, note.
+export function SolveList({ solves, puzzle, onPenalty, onDelete, onNote }: Props & {
+  puzzle: PuzzleId; onNote: (i: number, note: string) => void;
+}) {
+  // The open solve, by position in the session.
+  const [open, setOpen] = useState<number | null>(null);
+  const close = useCallback(() => setOpen(null), []);
   const rows = solves.map((s, i) => ({ s, i, ao: avgOf(solves.slice(0, i + 1), 5) })).reverse();
 
   return (
@@ -32,23 +39,27 @@ export function SolveList({ solves, onPenalty, onDelete }: Props) {
         ) : (
           <table><tbody>
             {rows.map(({ s, i, ao }) => (
-              <Fragment key={s.at + "-" + i}>
-                <tr className="row" onClick={e => { if (!(e.target as Element).closest("button")) setOpen(open === i ? -1 : i); }}>
-                  <td className="n">{i + 1}</td>
-                  <td className={s.pen === DNF ? "dnf" : ""}>
+              <tr key={s.at + "-" + i} className="row" onClick={e => { if (!(e.target as Element).closest("button")) setOpen(i); }}>
+                <td className="n">{i + 1}</td>
+                <td className={s.pen === DNF ? "dnf" : ""}>
+                  <button type="button" className="row-open" aria-label={`Solve ${i + 1} details`} onClick={() => setOpen(i)}>
                     {s.pen === DNF ? <>DNF <span className="raw">({fmt(s.t)})</span></> : <>{fmt(eff(s))}{s.pen === 2 && <span className="pen-tag">+</span>}</>}
-                  </td>
-                  <td className="ao">{ao == null ? "" : fmt(ao)}</td>
-                  <td className="act">
-                    <PenaltyButtons i={i} solve={s} compact onPenalty={(j, p) => { onPenalty(j, p); }} onDelete={j => { setOpen(-1); onDelete(j); }} />
-                  </td>
-                </tr>
-                {open === i && <tr className="scr"><td></td><td colSpan={3}>{s.scr}</td></tr>}
-              </Fragment>
+                  </button>
+                  {s.note && <span className="note-mark" title={s.note} aria-label="Has a note">✎</span>}
+                </td>
+                <td className="ao">{ao == null ? "" : fmt(ao)}</td>
+                <td className="act">
+                  <PenaltyButtons i={i} solve={s} compact onPenalty={onPenalty} onDelete={onDelete} />
+                </td>
+              </tr>
             ))}
           </tbody></table>
         )}
       </div>
+      {open != null && open < solves.length && (
+        <SolveDetail solves={solves} i={open} puzzle={puzzle} onPenalty={onPenalty} onNote={onNote}
+          onDelete={j => { onDelete(j); setOpen(null); }} onNavigate={setOpen} onClose={close} />
+      )}
     </div>
   );
 }

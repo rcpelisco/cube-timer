@@ -2,7 +2,11 @@
 
 export const DNF = -1;
 export type Penalty = 0 | 2 | typeof DNF;
-export interface Solve { t: number; pen: Penalty; scr: string; at: number }
+// note: what you wrote about the solve; left out (not empty) when there is none, since Firestore
+// rejects undefined fields.
+export interface Solve { t: number; pen: Penalty; scr: string; at: number; note?: string }
+
+export const MAX_NOTE = 500;
 
 export const eff = (s: Solve) => (s.pen === DNF ? Infinity : s.t + (s.pen === 2 ? 2000 : 0));
 

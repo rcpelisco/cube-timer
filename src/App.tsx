@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { eff, fmt, newBests, type Penalty } from "./lib/stats";
+import { eff, fmt, MAX_NOTE, newBests, type Penalty } from "./lib/stats";
 import { fireConfetti } from "./lib/confetti";
 import { load, save } from "./lib/storage";
 import { firebaseEnabled } from "./lib/firebase";
@@ -22,6 +22,7 @@ import { ScrambleThumb } from "./components/ScrambleThumb";
 import { TrendChart } from "./components/TrendChart";
 import { StatsPanel } from "./components/StatsPanel";
 import { PenaltyButtons, SolveList } from "./components/SolveList";
+import { SolveDetail } from "./components/SolveDetail";
 import { TabBar } from "./components/TabBar";
 import { QuickStats } from "./components/QuickStats";
 import { TrainerPage } from "./components/TrainerPage";
@@ -88,6 +89,17 @@ export default function App() {
   const setPenalty = (i: number, pen: Penalty) =>
     setSolves(list => list.map((s, j) => (j === i ? { ...s, pen: s.pen === pen ? 0 : pen } : s)));
   const deleteSolve = (i: number) => setSolves(list => list.filter((_, j) => j !== i));
+  // The last solve's detail, opened from the Note button under the time.
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteAt, setNoteAt] = useState<number | null>(null);
+  const closeNote = useCallback(() => { setNoteOpen(false); setNoteAt(null); }, []);
+  const setNote = (i: number, note: string) => setSolves(list => list.map((s, j) => {
+    if (j !== i) return s;
+    const rest = { ...s };
+    delete rest.note;
+    const trimmed = note.slice(0, MAX_NOTE);
+    return trimmed.trim() ? { ...rest, note: trimmed } : rest;
+  }));
   const importFile = (text: string) => {
     const result = importCsTimer(text, sessions.sessions);
     if (result.added.length) sessions.setSessions(result.sessions);
@@ -118,7 +130,7 @@ export default function App() {
 
   const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut };
   const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} />;
-  const solveList = <SolveList key={current.id} solves={solves} onPenalty={setPenalty} onDelete={deleteSolve} />;
+  const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote} />;
 
   const sessionProps = {
     list: sessions.sessions, currentId: current.id, onSelect: sessions.select,
@@ -169,8 +181,19 @@ export default function App() {
           )}
           <div className="hint dimmable">{hint}</div>
           <div className="last-actions dimmable">
-            {last && !active && <PenaltyButtons i={solves.length - 1} solve={last} onPenalty={setPenalty} onDelete={deleteSolve} />}
+            {last && !active && <>
+              <PenaltyButtons i={solves.length - 1} solve={last} onPenalty={setPenalty} onDelete={deleteSolve} />
+              <button type="button" className="note-btn" aria-label={last.note ? "Edit note on this solve" : "Add a note to this solve"}
+                title={last.note || undefined} onClick={() => setNoteOpen(true)}>
+                {last.note ? "✎ Note" : "+ Note"}
+              </button>
+            </>}
           </div>
+          {noteOpen && solves.length > 0 && (
+            <SolveDetail solves={solves} i={Math.min(noteAt ?? solves.length - 1, solves.length - 1)} puzzle={puzzle}
+              focusNote={noteAt == null} onPenalty={setPenalty} onNote={setNote}
+              onDelete={j => { deleteSolve(j); closeNote(); }} onNavigate={setNoteAt} onClose={closeNote} />
+          )}
         </div>
 
         {/* Phones: a scrambled-state thumbnail (tap for full screen) beside the averages,

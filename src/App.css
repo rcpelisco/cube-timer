@@ -778,3 +778,25 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .session-list li:has(.session-current-actions) { flex-wrap: wrap; }
 .session-current-actions { flex: 1 0 100%; display: flex; gap: 8px; flex-wrap: wrap; padding: 0 12px 12px; }
 .session-current-actions button { padding: 6px 12px; font-size: 13.5px; }
+
+/* Solve detail: tap a solve in the list */
+.log .row-open { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.log .note-mark { margin-left: 6px; color: var(--muted); font-size: 12px; }
+.avg-detail-value.dnf { color: var(--hold); }
+.solve-pen { font-size: 0.5em; color: var(--hold); vertical-align: 0.6em; }
+.avg-detail .overlay-close:disabled { opacity: 0.3; }
+.solve-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.solve-actions > button { min-width: 52px; }
+.solve-avgs { flex: 1; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.solve-avgs b { font: 500 14px var(--font-num); color: var(--ink); }
+.solve-delete-confirm { display: inline-flex; gap: 6px; }
+.solve-scramble .moves { margin: 0 0 10px; }
+.preview.solve-preview { min-height: 0; place-items: start; }
+.solve-note { display: flex; flex-direction: column; cursor: text; }
+.solve-note textarea {
+  font: 400 16px/1.45 var(--font-ui); color: var(--ink); background: var(--bg); resize: vertical;
+  border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; min-height: 84px;
+}
+.solve-note textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.avg-detail-list li:has(.avg-note) { grid-template-areas: "n time date" "n scr scr" "n note note"; }
+.avg-note { grid-area: note; font-size: 13px; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }

@@ -69,6 +69,7 @@ export function AverageDetail({ label, which, win, onClose }: {
               <span className={`avg-time${s.pen === DNF ? " dnf" : ""}`}>{shown(s, i)}</span>
               <span className="avg-scr">{s.scr || "—"}</span>
               <span className="avg-date">{dateText(s.at)}</span>
+              {s.note && <span className="avg-note">{s.note}</span>}
             </li>
           ))}
         </ol>

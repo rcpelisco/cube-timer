@@ -10,7 +10,7 @@
 
 import { newSession, type Session } from "./sessions";
 import { toPuzzle, type PuzzleId } from "./puzzles";
-import { DNF, type Penalty, type Solve } from "./stats";
+import { DNF, MAX_NOTE, type Penalty, type Solve } from "./stats";
 
 export interface ImportResult {
   sessions: Session[]; // the full list after the import
@@ -40,7 +40,11 @@ function toSolve(raw: unknown): Solve | null {
   if (pen === -1) p = DNF;
   else if (pen === 2000) p = 2;
   else if (pen > 0) t += pen;
-  return { t: Math.round(t), pen: p, scr, at };
+  const solve: Solve = { t: Math.round(t), pen: p, scr, at };
+  // csTimer's per-solve comment becomes the note.
+  const note = typeof raw[2] === "string" ? raw[2].trim().slice(0, MAX_NOTE) : "";
+  if (note) solve.note = note;
+  return solve;
 }
 
 // csTimer keeps dates to the second, so compare at that precision: a file exported from here and
@@ -57,7 +61,7 @@ export function exportCsTimer(sessions: Session[]): string {
   sessions.forEach((s, i) => {
     const id = i + 1;
     data[`session${id}`] = s.solves.map(v => [
-      [v.pen === DNF ? -1 : v.pen === 2 ? 2000 : 0, v.t], v.scr, "", Math.round(v.at / 1000),
+      [v.pen === DNF ? -1 : v.pen === 2 ? 2000 : 0, v.t], v.scr, v.note ?? "", Math.round(v.at / 1000),
     ]);
     meta[id] = { name: s.name, opt: { scrType: SCR_TYPE[toPuzzle(s.puzzle)] }, rank: id };
   });
