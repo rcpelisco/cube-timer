@@ -177,6 +177,26 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           </p>
         )}
       </div>
+
+      <div className="panel settings-group privacy">
+        <h2>Privacy</h2>
+        <p className="setting-note">
+          Your solves and settings are saved in this browser. No ads, analytics or tracking.
+        </p>
+        {enabled && (
+          <>
+            <p className="setting-note">
+              If you sign in, your Google name, email and photo, plus your solves, sessions and algorithm progress,
+              are stored with Google Firebase so they can sync. Only your account can read them. Trainer times
+              and appearance settings stay on this device.
+            </p>
+            <p className="setting-note">
+              Delete cloud data (under Account, once signed in) removes them from Firebase; Sign out and remove
+              from this device clears this browser. Your Google sign-in record itself is kept by Firebase.
+            </p>
+          </>
+        )}
+      </div>
       <CspReportList />
     </section>
   );
