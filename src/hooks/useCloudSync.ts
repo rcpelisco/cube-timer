@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  collection, doc, onSnapshot, onSnapshotsInSync, serverTimestamp, writeBatch,
-  type DocumentSnapshot, type Firestore, type QuerySnapshot,
-} from "firebase/firestore";
+import type { DocumentSnapshot, QuerySnapshot } from "firebase/firestore";
 import type { User } from "firebase/auth";
-import { db } from "../lib/firebase";
+import { loadFirebase, type FirebaseClient } from "../lib/firebase";
 import { mergeSessions, type Session } from "../lib/sessions";
 import { pickAlgPrefs, type AlgPrefs } from "../lib/algPrefs";
 import { diffDocs, fromDocs, stable, toBatches, toDocs, type SyncState } from "../lib/cloudDocs";
@@ -63,103 +60,112 @@ export function useCloudSync({ user, sessions, inspection, algPrefs, setSessions
   useEffect(() => {
     ready.current = false;
     known.current = new Map();
-    if (!user || !db) { setStatus("off"); return; }
+    if (!user) { setStatus("off"); return; }
     setStatus("loading");
-    const fs: Firestore = db;
-    const uid = user.uid;
-    const ref = (path: string) => (path === "user" ? doc(fs, "users", uid) : doc(fs, "users", uid, ...path.split("/")));
+    // Listens to the user's documents and sets up push; returns the function that stops listening.
+    function listen(fb: FirebaseClient, user: User): () => void {
+      const { collection, doc, onSnapshot, onSnapshotsInSync, serverTimestamp, writeBatch } = fb;
+      const fs = fb.db;
+      const uid = user.uid;
+      const ref = (path: string) => (path === "user" ? doc(fs, "users", uid) : doc(fs, "users", uid, ...path.split("/")));
 
-    push.current = (state: SyncState) => {
-      lastWritten.current = stable(state);
-      const { sets, deletes } = diffDocs(known.current, toDocs(state));
-      if (!sets.length && !deletes.length) return;
-      for (const [p, d] of sets) known.current.set(p, stable(d));
-      for (const p of deletes) known.current.delete(p);
-      (async () => {
-        for (const ops of toBatches(sets, deletes)) {
-          const batch = writeBatch(fs);
-          for (const op of ops) {
-            if (!op.data) batch.delete(ref(op.path));
-            else batch.set(ref(op.path), op.path === "user" ? { ...op.data, updatedAt: serverTimestamp() } : op.data);
+      push.current = (state: SyncState) => {
+        lastWritten.current = stable(state);
+        const { sets, deletes } = diffDocs(known.current, toDocs(state));
+        if (!sets.length && !deletes.length) return;
+        for (const [p, d] of sets) known.current.set(p, stable(d));
+        for (const p of deletes) known.current.delete(p);
+        (async () => {
+          for (const ops of toBatches(sets, deletes)) {
+            const batch = writeBatch(fs);
+            for (const op of ops) {
+              if (!op.data) batch.delete(ref(op.path));
+              else batch.set(ref(op.path), op.path === "user" ? { ...op.data, updatedAt: serverTimestamp() } : op.data);
+            }
+            await batch.commit();
           }
-          await batch.commit();
+        })().catch(() => setStatus("error"));
+      };
+
+      let userSnap: DocumentSnapshot | null = null;
+      let sessionSnap: QuerySnapshot | null = null;
+      let chunkSnap: QuerySnapshot | null = null;
+
+      // Runs once all three listeners have caught up with the same writes.
+      const update = () => {
+        if (!userSnap || !sessionSnap || !chunkSnap) return;
+        const snaps = [userSnap, sessionSnap, chunkSnap];
+        const fromCache = snaps.some(s => s.metadata.fromCache);
+        const pending = snaps.some(s => s.metadata.hasPendingWrites);
+
+        const userData = userSnap.exists() ? userSnap.data() : null;
+        const sessionDocs = sessionSnap.docs.map(d => [d.id, d.data()] as [string, Record<string, unknown>]);
+        const chunkDocs = chunkSnap.docs.map(d => d.data());
+        const remote = fromDocs(userData, sessionDocs, chunkDocs);
+
+        // What the server holds now (including this device's not-yet-acknowledged writes).
+        const next = new Map<string, string>();
+        if (userData) next.set("user", stable(plain(userData)));
+        for (const [id, d] of sessionDocs) next.set(`sessions/${id}`, stable(d));
+        for (const d of chunkSnap.docs) next.set(`chunks/${d.id}`, stable(d.data()));
+        known.current = next;
+
+        if (!ready.current) {
+          // A cache miss while offline isn't proof the cloud is empty; wait for the server.
+          if (fromCache && !remote.exists) { setStatus("offline"); return; }
+          // Another device is midway through writing; wait for the rest.
+          if (!remote.complete) return;
+          const merged: SyncState = {
+            sessions: remote.sessions ? mergeSessions(remote.sessions, local.current.sessions, readSyncedAt(uid)) : local.current.sessions,
+            inspection: remote.exists ? remote.inspection : local.current.inspection,
+            algs: pickAlgPrefs(local.current.algs, remote.algs),
+          };
+          ready.current = true;
+          setSessions(merged.sessions);
+          setInspection(merged.inspection);
+          setAlgPrefs(merged.algs);
+          // Also moves an old single-document account into the split layout.
+          push.current(merged);
+        } else if (!pending && remote.complete && remote.sessions) {
+          // A change from another device.
+          const data: SyncState = { sessions: remote.sessions, inspection: remote.inspection, algs: remote.algs ?? local.current.algs };
+          const json = stable(data);
+          if (json !== lastWritten.current) {
+            lastWritten.current = json;
+            setSessions(data.sessions);
+            setInspection(data.inspection);
+            setAlgPrefs(data.algs);
+          }
+          // An older copy of the app rewrote the user document in the old layout: put it right.
+          if (remote.legacy) push.current(data);
         }
-      })().catch(() => setStatus("error"));
-    };
 
-    let userSnap: DocumentSnapshot | null = null;
-    let sessionSnap: QuerySnapshot | null = null;
-    let chunkSnap: QuerySnapshot | null = null;
+        if (pending) setStatus(navigator.onLine ? "saving" : "offline");
+        else if (fromCache) setStatus("offline");
+        else { setStatus("synced"); writeSyncedAt(uid); }
+      };
 
-    // Runs once all three listeners have caught up with the same writes.
-    const update = () => {
-      if (!userSnap || !sessionSnap || !chunkSnap) return;
-      const snaps = [userSnap, sessionSnap, chunkSnap];
-      const fromCache = snaps.some(s => s.metadata.fromCache);
-      const pending = snaps.some(s => s.metadata.hasPendingWrites);
+      const opts = { includeMetadataChanges: true };
+      const fail = () => setStatus("error");
+      const unsubs = [
+        onSnapshot(doc(fs, "users", uid), opts, s => { userSnap = s; }, fail),
+        onSnapshot(collection(fs, "users", uid, "sessions"), opts, s => { sessionSnap = s; }, fail),
+        onSnapshot(collection(fs, "users", uid, "chunks"), opts, s => { chunkSnap = s; }, fail),
+        onSnapshotsInSync(fs, update),
+      ];
 
-      const userData = userSnap.exists() ? userSnap.data() : null;
-      const sessionDocs = sessionSnap.docs.map(d => [d.id, d.data()] as [string, Record<string, unknown>]);
-      const chunkDocs = chunkSnap.docs.map(d => d.data());
-      const remote = fromDocs(userData, sessionDocs, chunkDocs);
+      return () => unsubs.forEach(u => u());
+    }
 
-      // What the server holds now (including this device's not-yet-acknowledged writes).
-      const next = new Map<string, string>();
-      if (userData) next.set("user", stable(plain(userData)));
-      for (const [id, d] of sessionDocs) next.set(`sessions/${id}`, stable(d));
-      for (const d of chunkSnap.docs) next.set(`chunks/${d.id}`, stable(d.data()));
-      known.current = next;
-
-      if (!ready.current) {
-        // A cache miss while offline isn't proof the cloud is empty; wait for the server.
-        if (fromCache && !remote.exists) { setStatus("offline"); return; }
-        // Another device is midway through writing; wait for the rest.
-        if (!remote.complete) return;
-        const merged: SyncState = {
-          sessions: remote.sessions ? mergeSessions(remote.sessions, local.current.sessions, readSyncedAt(uid)) : local.current.sessions,
-          inspection: remote.exists ? remote.inspection : local.current.inspection,
-          algs: pickAlgPrefs(local.current.algs, remote.algs),
-        };
-        ready.current = true;
-        setSessions(merged.sessions);
-        setInspection(merged.inspection);
-        setAlgPrefs(merged.algs);
-        // Also moves an old single-document account into the split layout.
-        push.current(merged);
-      } else if (!pending && remote.complete && remote.sessions) {
-        // A change from another device.
-        const data: SyncState = { sessions: remote.sessions, inspection: remote.inspection, algs: remote.algs ?? local.current.algs };
-        const json = stable(data);
-        if (json !== lastWritten.current) {
-          lastWritten.current = json;
-          setSessions(data.sessions);
-          setInspection(data.inspection);
-          setAlgPrefs(data.algs);
-        }
-        // An older copy of the app rewrote the user document in the old layout: put it right.
-        if (remote.legacy) push.current(data);
-      }
-
-      if (pending) setStatus(navigator.onLine ? "saving" : "offline");
-      else if (fromCache) setStatus("offline");
-      else { setStatus("synced"); writeSyncedAt(uid); }
-    };
-
-    const opts = { includeMetadataChanges: true };
-    const fail = () => setStatus("error");
-    const unsubs = [
-      onSnapshot(doc(fs, "users", uid), opts, s => { userSnap = s; }, fail),
-      onSnapshot(collection(fs, "users", uid, "sessions"), opts, s => { sessionSnap = s; }, fail),
-      onSnapshot(collection(fs, "users", uid, "chunks"), opts, s => { chunkSnap = s; }, fail),
-      onSnapshotsInSync(fs, update),
-    ];
-
-    return () => { unsubs.forEach(u => u()); ready.current = false; push.current = () => {}; };
+    // Signed in means Firebase is already loaded (useAuth), so this resolves straight away.
+    let stop: (() => void) | null = null, cancelled = false;
+    loadFirebase().then(fb => { if (!cancelled) stop = listen(fb, user); }, () => setStatus("error"));
+    return () => { cancelled = true; stop?.(); ready.current = false; push.current = () => {}; };
   }, [user, setSessions, setInspection, setAlgPrefs]);
 
   // Push local changes (solves, penalties, sessions, settings, algorithm progress) after a short pause.
   useEffect(() => {
-    if (!user || !db || !ready.current) return;
+    if (!user || !ready.current) return;
     const state: SyncState = { sessions, inspection, algs: algPrefs };
     // Compared inside the timeout, so serialising a big history doesn't hold up the screen as a
     // solve finishes.
