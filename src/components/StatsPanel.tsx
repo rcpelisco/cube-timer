@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, type FormEvent } from "react";
-import { averageWindow, avgOf, bestRolling, bestSingle, DNF, eff, fmt, meanOf, rolling, type Solve, type Stat } from "../lib/stats";
+import { averageWindow, avgOf, bestRolling, bestSingle, DNF, eff, fmt, meanOf, rolling, shortTime, type Solve, type Stat } from "../lib/stats";
 import { CubeGlyph } from "./SessionPicker";
 import { AverageDetail } from "./AverageDetail";
 
@@ -68,8 +68,7 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, goal,
   );
 });
 
-// "12" for 12000 ms, "12.5" for 12500, "1:05" for 65000.
-const goalText = (ms: number) => fmt(ms).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+const goalText = shortTime;
 
 // Seconds ("12", "12.5") or minutes and seconds ("1:05") to ms; null if it isn't a usable time.
 function parseGoal(text: string): number | null {

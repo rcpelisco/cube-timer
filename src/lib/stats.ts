@@ -18,6 +18,9 @@ export function fmt(ms: number | null): string {
   return m ? `${m}:${tail}` : tail;
 }
 
+// A time without trailing zeros: "12" for 12000 ms, "12.5" for 12500, "1:05" for 65000.
+export const shortTime = (ms: number) => fmt(ms).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+
 export type Stat = (list: Solve[], n: number) => number | null;
 
 export const meanOf: Stat = (list, n) => {

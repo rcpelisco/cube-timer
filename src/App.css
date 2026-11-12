@@ -884,3 +884,9 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
 .trainer-ll-step { display: flex; gap: 14px; align-items: center; }
 .trainer-ll-step > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .trainer-ll-step .trainer-diagram { width: 76px; }
+
+/* Chart card tabs: Trend, Spread */
+.chart-tabs { margin-bottom: 10px; }
+.chart-tabs button { padding: 4px 10px; font-size: 12px; }
+.spread-legend span::before { display: none; }
+.spread-legend b { color: var(--ink); font: 500 12px var(--font-num); }

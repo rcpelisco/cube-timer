@@ -1,9 +1,33 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { avgOf, eff, fmt, type Solve } from "../lib/stats";
+import { Spread } from "./Spread";
 
 const W = 400, H = 120, L = 44, R = 8, T = 8, B = 10;
 
-export const TrendChart = memo(function TrendChart({ solves }: { solves: Solve[] }) {
+type Tab = "trend" | "spread";
+const TABS: { id: Tab; label: string }[] = [{ id: "trend", label: "Trend" }, { id: "spread", label: "Spread" }];
+const TAB_KEY = "cubeTimer.chartTab";
+const loadTab = (): Tab => {
+  try { const v = localStorage.getItem(TAB_KEY); return v === "spread" ? v : "trend"; } catch { return "trend"; }
+};
+
+// The chart card: the recent trend, or how the session's times spread out.
+export const TrendChart = memo(function TrendChart({ solves, goal }: { solves: Solve[]; goal?: number }) {
+  const [tab, setTab] = useState<Tab>(loadTab);
+  const pick = (t: Tab) => { setTab(t); try { localStorage.setItem(TAB_KEY, t); } catch { /* ignore */ } };
+  return (
+    <div className="panel trend">
+      <div className="chart-tabs view-tabs" role="tablist" aria-label="Chart">
+        {TABS.map(t => (
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : ""} onClick={() => pick(t.id)}>{t.label}</button>
+        ))}
+      </div>
+      {tab === "trend" ? <Trend solves={solves} /> : <Spread solves={solves} goal={goal} />}
+    </div>
+  );
+});
+
+function Trend({ solves }: { solves: Solve[] }) {
   const start = Math.max(0, solves.length - 50);
   const pts: [number, number][] = [], aoPts: [number, number][] = [];
   for (let i = start; i < solves.length; i++) {
@@ -14,13 +38,13 @@ export const TrendChart = memo(function TrendChart({ solves }: { solves: Solve[]
   }
 
   return (
-    <div className="panel trend">
+    <>
       <h2><span>Trend · last 50</span><span>{pts.length >= 2 ? `${solves.length - start} solves` : ""}</span></h2>
       {pts.length < 2 ? <div className="empty">The chart appears after two solves.</div> : <Chart {...{ pts, aoPts, start, end: solves.length - 1 }} />}
       <div className="legend"><span className="l-single">Single</span><span className="l-ao5">Ao5</span></div>
-    </div>
+    </>
   );
-});
+}
 
 function Chart({ pts, aoPts, start, end }: { pts: [number, number][]; aoPts: [number, number][]; start: number; end: number }) {
   const all = pts.concat(aoPts).map(p => p[1]);
