@@ -87,6 +87,14 @@ export default function App() {
   // already worked out for that list instead of going through the whole session again.
   const [pb, setPb] = useState<{ at: number; prev: Solve[] } | null>(null);
 
+  // Just stopped: the time lands with a short accent flash (see .stage.landed).
+  const [landed, setLanded] = useState(0);
+  useEffect(() => {
+    if (!landed) return;
+    const id = setTimeout(() => setLanded(0), 1000);
+    return () => clearTimeout(id);
+  }, [landed]);
+
   const recordAttempt = comp.record;
   const onFinish = useCallback((t: number, pen: Penalty, marks: number[]) => {
     const scr = scrambleRef.current?.moves ?? "";
@@ -96,6 +104,7 @@ export default function App() {
     const prev = solvesRef.current;
     if (newBests(prev, solve).length) { setPb({ at: solve.at, prev }); fireConfetti(); }
     setSolves(list => [...list, solve]);
+    setLanded(solve.at);
     if (round.live) recordAttempt(solve.at);
     nextScramble();
   }, [setSolves, nextScramble, recordAttempt]);
@@ -239,6 +248,7 @@ export default function App() {
     timer.phase === "inspect" && !timer.holding && "inspect",
     timer.warn === 8 && "warn8",
     timer.warn === 12 && "warn12",
+    landed && !active && "landed",
   ].filter(Boolean).join(" ");
 
   const account = { enabled: firebaseEnabled, user: auth.user, sync, error: auth.error, onSignIn: auth.signIn, onSignOut: auth.signOut };

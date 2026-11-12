@@ -13,6 +13,7 @@ import { useBoolPref } from "../lib/boolPref";
 import { inspectionCallsPref } from "../lib/inspectionCalls";
 import { canVibrate, hapticsPref } from "../lib/haptics";
 import { SplitPhasesSetting } from "./SplitPhasesSetting";
+import { AccentSetting } from "./AccentSetting";
 import { toPuzzle } from "../lib/puzzles";
 import { TARGET_OPTIONS, useDailyTarget } from "../lib/dailyTarget";
 import { SessionManager, type SessionPickerProps } from "./SessionPicker";
@@ -118,10 +119,11 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
 
       <div className="panel settings-group">
         <h2>Appearance</h2>
-        <div className="setting-row">
+        <div className="setting-row stacked theme-setting">
           <span><b>Theme</b><small>System follows your phone's setting.</small></span>
+          <ThemeChoice />
         </div>
-        <ThemeChoice />
+        <AccentSetting />
         <TimerBgSetting />
       </div>
 

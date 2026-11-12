@@ -1,5 +1,7 @@
+import { ACCENTS, accentStore } from "./accent";
+
 // A result as an image to post or send: a 1080×1350 card (4:5, which feeds and chats show whole)
-// in the app's dark colors, drawn on a canvas with the app's own fonts.
+// in the app's dark colors and your accent colour, drawn on a canvas with the app's own fonts.
 
 export interface CardTime { text: string; dim?: boolean }
 
@@ -15,7 +17,7 @@ export interface CardData {
 
 const W = 1080, H = 1350, PAD = 96;
 const C = {
-  bg1: "#0d1116", bg2: "#18202b", ink: "#e6ebf2", muted: "#8b97a8", line: "#273140", accent: "#7aaeff", chip: "#1b232e",
+  bg1: "#0d1116", bg2: "#18202b", ink: "#e6ebf2", muted: "#8b97a8", line: "#273140", chip: "#1b232e",
 };
 const UI = '"Archivo", system-ui, sans-serif', NUM = '"Chivo Mono", ui-monospace, monospace';
 
@@ -53,13 +55,14 @@ export async function drawCard(d: CardData): Promise<Blob> {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d")!;
   const inner = W - PAD * 2;
+  const accent = ACCENTS[accentStore.get()].dark;
 
   const bg = ctx.createLinearGradient(0, 0, W * 0.4, H);
   bg.addColorStop(0, C.bg2); bg.addColorStop(1, C.bg1);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   // A soft glow behind the value.
   const glow = ctx.createRadialGradient(PAD + 200, 520, 0, PAD + 200, 520, 640);
-  glow.addColorStop(0, "rgba(122, 174, 255, 0.16)"); glow.addColorStop(1, "rgba(122, 174, 255, 0)");
+  glow.addColorStop(0, `${accent}29`); glow.addColorStop(1, `${accent}00`); // 16% → 0% opacity
   ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
 
   ctx.textBaseline = "alphabetic";
@@ -75,7 +78,7 @@ export async function drawCard(d: CardData): Promise<Blob> {
     ctx.font = `700 30px ${UI}`;
     const bw = ctx.measureText(d.badge).width + 44;
     roundRect(ctx, W - PAD - bw, y - 40, bw, 54, 27);
-    ctx.fillStyle = C.accent; ctx.fill();
+    ctx.fillStyle = accent; ctx.fill();
     ctx.fillStyle = C.bg1;
     ctx.fillText(d.badge, W - PAD - bw + 22, y - 3);
   }
@@ -148,17 +151,17 @@ export async function drawCard(d: CardData): Promise<Blob> {
   ctx.save();
   ctx.translate(W - PAD - bw - 16 - 336 * k - 88 * k, fy + 8 - 440 * k);
   ctx.scale(k, k);
-  ctx.fillStyle = C.accent;
+  ctx.fillStyle = accent;
   roundRect(ctx, 226, 78, 60, 30, 10); ctx.fill();
   ctx.fillRect(246, 100, 20, 12);
   ctx.lineWidth = 28;
   ctx.strokeStyle = C.line;
   ctx.beginPath(); ctx.arc(256, 272, 150, 0, Math.PI * 2); ctx.stroke();
-  ctx.strokeStyle = C.accent; ctx.lineCap = "round";
+  ctx.strokeStyle = accent; ctx.lineCap = "round";
   ctx.beginPath(); ctx.arc(256, 272, 150, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.72); ctx.stroke();
   for (let i = 0; i < 9; i++) {
     roundRect(ctx, 181 + (i % 3) * 52, 197 + Math.floor(i / 3) * 52, 46, 46, 10);
-    ctx.fillStyle = i % 2 ? C.accent : C.ink; ctx.fill();
+    ctx.fillStyle = i % 2 ? accent : C.ink; ctx.fill();
   }
   ctx.restore();
 

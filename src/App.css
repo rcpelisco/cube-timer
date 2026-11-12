@@ -5,7 +5,10 @@
   --ink: #131a23;
   --muted: #5b6676;
   --line: #d3d9e1;
-  --accent: #0b57d0;
+  /* --accent-l / --accent-d: the accent on light and dark backgrounds; set from the chosen accent
+     (lib/accent.ts), blue by default. */
+  --accent-l: #0b57d0; --accent-d: #7aaeff;
+  --accent: var(--accent-l);
   --hold: #d22f27;
   --ready: #0a8f4f;
   --warn: #b86e00;
@@ -22,13 +25,18 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0d1116; --surface: #151b23; --ink: #e6ebf2; --muted: #8b97a8; --line: #273140;
-    --accent: #7aaeff; --hold: #ff6b62; --ready: #3fd18a; --warn: #f0a83a; --net-gap: #05070a;
+    --accent: var(--accent-d); --hold: #ff6b62; --ready: #3fd18a; --warn: #f0a83a; --net-gap: #05070a;
     --sticker-off: #39424f; --sticker-edge: rgb(0 0 0 / 0.55); color-scheme: dark;
   }
 }
+/* Pure black (Settings → Appearance): dark mode with black backgrounds, for OLED screens. */
+@media (prefers-color-scheme: dark) {
+  :root[data-black]:not([data-theme="light"]) { --bg: #000; --surface: #0b0e12; --line: #1e252f; --net-gap: #000; }
+}
+:root[data-theme="dark"][data-black] { --bg: #000; --surface: #0b0e12; --line: #1e252f; --net-gap: #000; }
 :root[data-theme="dark"] {
   --bg: #0d1116; --surface: #151b23; --ink: #e6ebf2; --muted: #8b97a8; --line: #273140;
-  --accent: #7aaeff; --hold: #ff6b62; --ready: #3fd18a; --warn: #f0a83a; --net-gap: #05070a;
+  --accent: var(--accent-d); --hold: #ff6b62; --ready: #3fd18a; --warn: #f0a83a; --net-gap: #05070a;
   --sticker-off: #39424f; --sticker-edge: rgb(0 0 0 / 0.55); color-scheme: dark;
 }
 
@@ -103,6 +111,33 @@ html.scroll-locked, html.scroll-locked body { overflow: hidden; overscroll-behav
 }
 .stage.holding .time { color: var(--hold); }
 .stage.ready .time { color: var(--ready); }
+/* A soft glow behind the time: red while you hold, green once it's ready to go, and an accent
+   flash as a finished time lands. Full screen (inspection), it also lights the screen's edges. */
+.stage { isolation: isolate; }
+.stage::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(ellipse 55% 50% at 50% 50%, color-mix(in srgb, var(--glow, transparent) 26%, transparent), transparent 72%);
+  opacity: 0; transition: opacity 180ms ease-out;
+}
+.stage.holding { --glow: var(--hold); }
+.stage.ready { --glow: var(--ready); }
+.stage.holding::after { opacity: 0.75; }
+.stage.ready::after { opacity: 1; }
+body.solving .stage::after { box-shadow: inset 0 0 90px color-mix(in srgb, var(--glow, transparent) 30%, transparent); }
+/* Ready: the time gives a small "go" bump as it turns green. */
+.stage.ready .time { animation: time-go 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes time-go { 50% { transform: scale(1.04); } }
+/* Landed: the time starts in the accent colour and settles back, with a fading glow. */
+.stage.landed { --glow: var(--accent); }
+.stage.landed::after { animation: glow-land 900ms ease-out; }
+.stage.landed .time { animation: time-land 900ms ease-out; }
+@keyframes glow-land { from { opacity: 0.9; } to { opacity: 0; } }
+@keyframes time-land { from { color: var(--accent); transform: scale(1.03); } 40% { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .stage.ready .time { animation: none; }
+  .stage.landed .time { animation: time-land-still 900ms ease-out; }
+}
+@keyframes time-land-still { from { color: var(--accent); } }
 .stage.inspect .time { color: var(--accent); }
 .stage.inspect.warn8 .time { color: var(--warn); }
 .stage.inspect.warn12 .time { color: var(--hold); }
@@ -1087,7 +1122,16 @@ body.solving .splits-badge { display: none; }
 /* The row is a column here, so the stacked row's 260px basis would become height. */
 .setting-row.stacked.split-setting > span { flex: none; }
 /* A hairline between settings in a card. */
-.settings-group .setting-row + .setting-row { border-top: 1px solid var(--line); padding-top: 12px; }
+.settings-group .setting-row + :is(.setting-row, .bg-setting) { border-top: 1px solid var(--line); padding-top: 12px; }
+/* Theme and accent: the choices sit under the label, full width. */
+.setting-row.theme-setting { cursor: default; }
+.setting-row.theme-setting .segmented { flex: 1 1 100%; }
+.accent-choice { flex: 1 1 100%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 480px) { .accent-choice { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.accent-choice button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; border-radius: 10px; font-weight: 600; color: var(--muted); background: var(--bg); }
+.accent-choice i { width: 26px; height: 26px; border-radius: 50%; background: var(--swatch-l); background: light-dark(var(--swatch-l), var(--swatch-d)); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12); }
+.accent-choice button.on { background: var(--surface); color: var(--ink); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.accent-choice button.on i { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent); }
 /* Mock comp history */
 .comp-history-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .comp-history-tabs .view-tabs button span { font-weight: 500; opacity: 0.6; margin-left: 2px; }
