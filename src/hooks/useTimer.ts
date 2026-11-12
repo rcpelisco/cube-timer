@@ -6,7 +6,6 @@ import {
   type RefObject,
 } from "react";
 import { DNF, fmt, type Penalty } from "../lib/stats";
-import { setWakeLockStatus } from "../lib/wakeLockStatus";
 
 // Stackmat-style timer: hold until ready (green), release to start, any key or tap to stop.
 // Optional WCA inspection: 15 s countdown, +2 after 15 s, DNF after 17 s.
@@ -284,20 +283,14 @@ export function useTimer({
 // home screen), so every tap or key press also retries while no lock is held.
 function useWakeLock(active: boolean) {
   useEffect(() => {
-    if (!active) return;
-    if (!("wakeLock" in navigator)) {
-      setWakeLockStatus({ state: "unsupported" });
-      return;
-    }
+    if (!active || !("wakeLock" in navigator)) return;
     let lock: WakeLockSentinel | null = null,
       pending = false,
-      disposed = false,
-      requests = 0;
+      disposed = false;
     const acquire = () => {
       if (disposed || pending || document.visibilityState !== "visible") return;
       if (lock && !lock.released) return;
       pending = true;
-      setWakeLockStatus({ state: "requesting", requests: ++requests });
       navigator.wakeLock
         .request("screen")
         .then((l) => {
@@ -306,15 +299,8 @@ function useWakeLock(active: boolean) {
             return;
           }
           lock = l;
-          setWakeLockStatus({ state: "held", detail: "" });
-          l.addEventListener("release", () => {
-            if (!disposed) setWakeLockStatus({ state: "released", detail: `page ${document.visibilityState}` });
-          });
         })
-        .catch((e: unknown) => {
-          const err = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-          setWakeLockStatus({ state: "refused", detail: err });
-        })
+        .catch(() => {})
         .finally(() => {
           pending = false;
         });
@@ -329,7 +315,6 @@ function useWakeLock(active: boolean) {
       window.removeEventListener("pointerdown", acquire, { capture: true });
       window.removeEventListener("keydown", acquire, { capture: true });
       lock?.release().catch(() => {});
-      setWakeLockStatus({ state: "idle", detail: "off this page, so the screen may sleep" });
     };
   }, [active]);
 }
