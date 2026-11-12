@@ -30,6 +30,7 @@ import { StatsPanel } from "./components/StatsPanel";
 import { PenaltyButtons, SolveList } from "./components/SolveList";
 import { SolveDetail } from "./components/SolveDetail";
 import { TabBar } from "./components/TabBar";
+import { ScrollTop } from "./components/ScrollTop";
 import { QuickStats } from "./components/QuickStats";
 import { TodayRing } from "./components/TodayRing";
 import { SplitsBadge } from "./components/SplitsBadge";
@@ -400,8 +401,11 @@ export default function App() {
   return isPhone ? (
     <div className="phone-shell">
       {bg}
-      <div className="page-scroll">{page}</div>
+      <div className="page-area">
+        <div className="page-scroll">{page}</div>
+        <ScrollTop phone />
+      </div>
       <TabBar view={view} onView={setView} />
     </div>
-  ) : <>{bg}{page}</>;
+  ) : <>{bg}{page}<ScrollTop phone={false} /></>;
 }

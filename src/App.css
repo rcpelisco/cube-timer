@@ -618,6 +618,25 @@ body:not(.solving) .app.phone .stage .time { font-size: clamp(64px, 19vw, 120px)
   .page-scroll { padding-top: calc(env(safe-area-inset-top, 0px) + 36px); }
 }
 html.scroll-locked .page-scroll { overflow: hidden; }
+.page-area { flex: 1 1 auto; min-height: 0; position: relative; display: flex; flex-direction: column; }
+
+/* Back to top: shows once a page is scrolled down more than a screen. Fixed to the window on
+   computers; on phones it sits in .page-area, just above the tab bar. */
+.scroll-top {
+  position: fixed; right: 24px; bottom: 24px; z-index: 20;
+  width: 44px; height: 44px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid var(--line); color: var(--accent);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.14);
+  opacity: 0; transform: translateY(8px) scale(0.9); visibility: hidden; pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
+}
+.scroll-top.on { opacity: 1; transform: none; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.page-area .scroll-top { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: 16px; }
+body.solving .scroll-top { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .scroll-top { transition: none; } }
 
 /* ---------- Personal best ---------- */
 .confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 90; pointer-events: none; }
