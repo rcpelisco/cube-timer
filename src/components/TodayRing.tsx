@@ -18,9 +18,11 @@ export const TodayRing = memo(function TodayRing({ sessions }: { sessions: Sessi
     return () => clearTimeout(id);
   }, [dayStart]);
 
+  // Solves are kept oldest first, so each session is read back from its newest solve to the
+  // first one from before today.
   const done = useMemo(() => {
     let n = 0;
-    for (const s of sessions) for (const solve of s.solves) if (solve.at >= dayStart) n++;
+    for (const { solves } of sessions) for (let i = solves.length - 1; i >= 0 && solves[i].at >= dayStart; i--) n++;
     return n;
   }, [sessions, dayStart]);
 

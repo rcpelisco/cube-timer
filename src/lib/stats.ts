@@ -41,7 +41,21 @@ export const avgOf: Stat = (list, n) => {
 // The value of `fn` over every run of n solves in a row: out[i] is for solves i−n+1 … i (null
 // before there are n). Gives exactly what fn(solves.slice(i − n + 1, i + 1), n) would, but for
 // avgOf it keeps the window sorted as it slides instead of sorting each window from scratch.
+// Kept per solve list: the stats, the solve list, the goal and the PB check all ask for the same
+// series after each solve, so it's worked out once. The result is shared: don't change it.
+const rollCache = new WeakMap<Solve[], Map<Stat, Map<number, (number | null)[]>>>();
+
 export function rolling(solves: Solve[], fn: Stat, n: number): (number | null)[] {
+  let byFn = rollCache.get(solves);
+  if (!byFn) rollCache.set(solves, byFn = new Map());
+  let byN = byFn.get(fn);
+  if (!byN) byFn.set(fn, byN = new Map());
+  let out = byN.get(n);
+  if (!out) byN.set(n, out = computeRolling(solves, fn, n));
+  return out;
+}
+
+function computeRolling(solves: Solve[], fn: Stat, n: number): (number | null)[] {
   const out: (number | null)[] = new Array(solves.length).fill(null);
   if (n < 1 || solves.length < n) return out;
   if (fn === avgOf) {

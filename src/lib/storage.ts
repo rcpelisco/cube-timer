@@ -22,6 +22,30 @@ export function load(): Saved {
   return { sessions: [first], currentId: first.id, inspection: false };
 }
 
-export function save(data: Saved) {
+// Writing the whole history takes a while once it's big, so it waits until the browser is idle
+// (at most half a second) rather than holding up the frame that shows a finished time. Changes in
+// the meantime are folded into one write, and a pending write happens at once when the app is
+// hidden or closed.
+let pending: Saved | null = null;
+let scheduled = false;
+
+function flush() {
+  scheduled = false;
+  if (!pending) return;
+  const data = pending;
+  pending = null;
   try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* ignore */ }
+}
+
+export function save(data: Saved) {
+  pending = data;
+  if (scheduled) return;
+  scheduled = true;
+  if (typeof requestIdleCallback === "function") requestIdleCallback(flush, { timeout: 500 });
+  else setTimeout(flush, 100);
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
 }

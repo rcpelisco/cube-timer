@@ -83,7 +83,9 @@ export default function App() {
   const solvesRef = useRef(solves);
   useEffect(() => { solvesRef.current = solves; }, [solves]);
   // The solve that last set a personal best (its badge shows while it's the latest solve).
-  const [pbAt, setPbAt] = useState<number | null>(null);
+  // `prev` is the session's solves before it, kept so the badge check below reuses the averages
+  // already worked out for that list instead of going through the whole session again.
+  const [pb, setPb] = useState<{ at: number; prev: Solve[] } | null>(null);
 
   const recordAttempt = comp.record;
   const onFinish = useCallback((t: number, pen: Penalty, marks: number[]) => {
@@ -91,7 +93,8 @@ export default function App() {
     const round = compRef.current;
     const solve: Solve = { t, pen: round.live ? limitPenalty(t, pen, round.limit) : pen, scr, at: Date.now() };
     if (marks.length) solve.sp = marks;
-    if (newBests(solvesRef.current, solve).length) { setPbAt(solve.at); fireConfetti(); }
+    const prev = solvesRef.current;
+    if (newBests(prev, solve).length) { setPb({ at: solve.at, prev }); fireConfetti(); }
     setSolves(list => [...list, solve]);
     if (round.live) recordAttempt(solve.at);
     nextScramble();
@@ -198,8 +201,12 @@ export default function App() {
   }, [showTimer, setPenalty, askDelete, confirmDelete, keepSolve]);
   // Re-checked against the solve as it is now, so a +2, DNF or delete takes the badge away.
   const pbKinds = useMemo(
-    () => (last && last.at === pbAt ? newBests(solves.slice(0, -1), last) : []),
-    [solves, last, pbAt],
+    () => {
+      if (!last || last.at !== pb?.at) return [];
+      const same = pb.prev.length === solves.length - 1 && pb.prev.every((s, i) => s === solves[i]);
+      return newBests(same ? pb.prev : solves.slice(0, -1), last);
+    },
+    [solves, last, pb],
   );
   const shown = timer.display ?? (last ? fmt(eff(last)) : "0.00");
   const act = isTouch ? "Touch and hold" : <>Hold <kbd>Space</kbd></>;
