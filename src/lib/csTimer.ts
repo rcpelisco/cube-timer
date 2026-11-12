@@ -16,7 +16,6 @@ export interface ImportResult {
   sessions: Session[]; // the full list after the import
   added: { name: string; puzzle: PuzzleId; solves: number; merged: boolean }[];
   skipped: { name: string; reason: string; solves: number }[];
-  tooBigToSync: boolean;
 }
 
 // csTimer scramble types → puzzles here. FMC times are move counts, so they're left out.
@@ -130,7 +129,5 @@ export function importCsTimer(text: string, existing: Session[]): ImportResult {
     sessions = sessions.filter(s => !(s.solves.length === 0 && /^Session \d+$/.test(s.name) && existing.length === 1));
     if (!sessions.length) sessions = [...existing];
   }
-  // Sync keeps everything in one Firestore document, which is capped at 1 MiB.
-  const tooBigToSync = new Blob([JSON.stringify(sessions)]).size > 900_000;
-  return { sessions, added, skipped, tooBigToSync };
+  return { sessions, added, skipped };
 }

@@ -70,9 +70,6 @@ export function ImportCsTimer({ sessions, onImport }: { sessions: Session[]; onI
               <li key={"skip" + s.name} className="muted">Skipped {s.name} ({n(s.solves, "solve")}): {s.reason}</li>
             ))}
           </ul>
-          {result.tooBigToSync && (
-            <p className="account-error import-error">That's a lot of solves: they're saved on this device, but may be too many to sync to your account.</p>
-          )}
         </div>
       )}
 
