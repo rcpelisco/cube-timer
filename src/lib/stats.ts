@@ -51,7 +51,29 @@ export function rolling(solves: Solve[], fn: Stat, n: number): (number | null)[]
   let byN = byFn.get(fn);
   if (!byN) byFn.set(fn, byN = new Map());
   let out = byN.get(n);
-  if (!out) byN.set(n, out = computeRolling(solves, fn, n));
+  if (!out) {
+    byN.set(n, out = extendRolling(solves, fn, n) ?? computeRolling(solves, fn, n));
+    lastRoll.set(fn, (lastRoll.get(fn) ?? new Map()).set(n, { solves, out }));
+  }
+  return out;
+}
+
+// The last series worked out for each fn and n. A new solve list is nearly always the previous one
+// with a solve added (or the last one penalised or deleted): out[i] depends only on solves up to
+// i, so the values before the first changed solve carry over, and only the few after it are worked
+// out. Each of those is one window, the same sum in the same order, so the result is identical.
+const lastRoll = new Map<Stat, Map<number, { solves: Solve[]; out: (number | null)[] }>>();
+const EXTEND_MAX = 50;
+
+function extendRolling(solves: Solve[], fn: Stat, n: number): (number | null)[] | null {
+  const last = lastRoll.get(fn)?.get(n);
+  if (!last) return null;
+  const old = last.solves, len = Math.min(old.length, solves.length);
+  let same = 0;
+  while (same < len && old[same] === solves[same]) same++;
+  if (solves.length - same > EXTEND_MAX) return null;
+  const out = last.out.slice(0, same);
+  for (let i = same; i < solves.length; i++) out.push(i >= n - 1 && n >= 1 ? fn(solves.slice(i - n + 1, i + 1), n) : null);
   return out;
 }
 
