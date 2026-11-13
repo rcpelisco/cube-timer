@@ -5,7 +5,9 @@
 
 export type CrossColor = "white" | "yellow" | "green" | "blue" | "red" | "orange";
 
-const C = { white: "#f4f4f4", yellow: "#ffd500", green: "#0a9a4a", blue: "#0051ba", red: "#c8102e", orange: "#ff5800" };
+// Red, orange and yellow are spread apart in brightness as well as hue (dark red, mid orange,
+// light lemon yellow), so they read apart in small diagrams.
+const C = { white: "#f4f4f4", yellow: "#ffe600", green: "#0a9a4a", blue: "#0051ba", red: "#b8001f", orange: "#ff6d00" };
 
 // faces: the color of each side in the solver's frame (top, front, right, back, left) when the
 // cross is on the bottom, holding the cube with the usual front for that cross.

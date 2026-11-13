@@ -11,11 +11,11 @@ export interface NetLayout { viewBox: string; stickers: NetSticker[]; colors: Re
 // cubing.js color names → the app's cube colors.
 const PALETTE: [RegExp, string][] = [
   [/^(white|#fff(fff)?|rgb\(255, 255, 255\))$/, "#f4f4f4"],
-  [/^(yellow|#ff0|rgb\(244, 244, 0\)|rgb\(255, 255, 0\))$/, "#ffd500"],
+  [/^(yellow|#ff0|rgb\(244, 244, 0\)|rgb\(255, 255, 0\))$/, "#ffe600"],
   [/^(limegreen|#4e0|#44ee00|rgb\(68, 238, 0\)|rgb\(50, 205, 50\))$/, "#0a9a4a"],
   [/^(#26f|#2266ff|rgb\(34, 102, 255\))$/, "#0051ba"],
-  [/^(red|#f00|rgb\(255, 0, 0\))$/, "#c8102e"],
-  [/^(orange|#f80|#ff8000|rgb\(255, 128, 0\)|rgb\(255, 165, 0\))$/, "#ff5800"],
+  [/^(red|#f00|rgb\(255, 0, 0\))$/, "#b8001f"],
+  [/^(orange|#f80|#ff8000|rgb\(255, 128, 0\)|rgb\(255, 165, 0\))$/, "#ff6d00"],
 ];
 const toPalette = (c: string) => PALETTE.find(([re]) => re.test(c.trim().toLowerCase()))?.[1] ?? c;
 

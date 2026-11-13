@@ -2,7 +2,7 @@
 // and flutter down. Drawn on a temporary full-screen canvas that ignores touches, so it never gets
 // in the way of the next solve. Skipped when the system asks for reduced motion.
 
-const COLORS = ["#f4f4f4", "#ffd500", "#0a9a4a", "#0051ba", "#c8102e", "#ff5800"];
+const COLORS = ["#f4f4f4", "#ffe600", "#0a9a4a", "#0051ba", "#b8001f", "#ff6d00"];
 const DURATION = 3200;
 
 interface Piece {
