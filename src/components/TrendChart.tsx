@@ -2,6 +2,7 @@ import { memo, useId, useState } from "react";
 import { useChartWidth } from "../hooks/useChartWidth";
 import { avgOf, eff, fmt, type Solve } from "../lib/stats";
 import type { Session } from "../lib/sessions";
+import type { PuzzleId } from "../lib/puzzles";
 import { Spread } from "./Spread";
 import { Days } from "./Days";
 import { Progress } from "./Progress";
@@ -16,8 +17,9 @@ const loadTab = (): Tab => {
 };
 
 // The chart card: the recent trend, the long-term progress, how the session's times spread out, or the days you practised.
-// sessions: every session, for the practice days (which count solves in all of them).
-export const TrendChart = memo(function TrendChart({ solves, goal, sessions }: { solves: Solve[]; goal?: number; sessions: Session[] }) {
+// sessions: every session, for the practice days (which count solves in all of them) and progress
+// across every session for the puzzle.
+export const TrendChart = memo(function TrendChart({ solves, goal, sessions, puzzle }: { solves: Solve[]; goal?: number; sessions: Session[]; puzzle: PuzzleId }) {
   const [tab, setTab] = useState<Tab>(loadTab);
   const pick = (t: Tab) => { setTab(t); try { localStorage.setItem(TAB_KEY, t); } catch { /* ignore */ } };
   return (
@@ -27,7 +29,7 @@ export const TrendChart = memo(function TrendChart({ solves, goal, sessions }: {
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : ""} onClick={() => pick(t.id)}>{t.label}</button>
         ))}
       </div>
-      {tab === "trend" ? <Trend solves={solves} /> : tab === "progress" ? <Progress solves={solves} goal={goal} /> : tab === "spread" ? <Spread solves={solves} goal={goal} /> : <Days sessions={sessions} />}
+      {tab === "trend" ? <Trend solves={solves} /> : tab === "progress" ? <Progress solves={solves} goal={goal} sessions={sessions} puzzle={puzzle} /> : tab === "spread" ? <Spread solves={solves} goal={goal} /> : <Days sessions={sessions} />}
     </div>
   );
 });

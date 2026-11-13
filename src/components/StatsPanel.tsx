@@ -3,9 +3,11 @@ import { averageWindow, avgOf, bestRolling, bestSingle, DNF, eff, fmt, meanOf, r
 import { CubeGlyph } from "./SessionPicker";
 import { AverageDetail } from "./AverageDetail";
 import { PbHistory } from "./PbHistory";
+import { CompareRanges } from "./CompareRanges";
 import { SplitBars } from "./SplitsLine";
 import { splitMeans } from "../lib/splits";
 import type { PuzzleId } from "../lib/puzzles";
+import type { Session } from "../lib/sessions";
 import { addProblem, MAX_AVG, MIN_AVG, useExtraAverages } from "../lib/extraAverages";
 
 // name, how it's worked out (null: a single), size, and whether you added it (it can be removed).
@@ -18,8 +20,9 @@ const ROWS: Row[] = [
 type Open = { name: string; which: "current" | "best"; el: HTMLElement };
 
 // memo: the timer re-renders the app every frame while it runs; this only needs to when the solves change.
-export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzleId, goal, onGoal }: {
-  solves: Solve[]; cube?: string; puzzle: string; puzzleId: PuzzleId; goal?: number; onGoal?: (goal: number | null) => void;
+// sessions: every session, so Compare dates can take in all of this puzzle's.
+export const StatsPanel = memo(function StatsPanel({ solves, sessions, cube, puzzle, puzzleId, goal, onGoal }: {
+  solves: Solve[]; sessions: Session[]; cube?: string; puzzle: string; puzzleId: PuzzleId; goal?: number; onGoal?: (goal: number | null) => void;
 }) {
   const splits = useMemo(() => splitMeans(solves), [solves]);
   const extra = useExtraAverages();
@@ -30,6 +33,7 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
   );
   const [open, setOpen] = useState<Open | null>(null);
   const [pbsOpen, setPbsOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
   const { okCount, mean, values } = useMemo(() => {
     let okCount = 0, sum = 0;
     for (const s of solves) if (s.pen !== DNF) { okCount++; sum += eff(s); }
@@ -86,7 +90,12 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
         <span>Solves <b>{okCount === solves.length ? solves.length : `${okCount}/${solves.length}`}</b></span>
         <span>Mean <b>{fmt(mean)}</b></span>
       </div>
-      {okCount > 0 && <button type="button" className="pb-link" onClick={() => setPbsOpen(true)}>PB history ›</button>}
+      {okCount > 0 && (
+        <div className="stats-links">
+          <button type="button" className="pb-link" onClick={() => setPbsOpen(true)}>PB history ›</button>
+          <button type="button" className="pb-link" onClick={() => setCompareOpen(true)}>Compare dates ›</button>
+        </div>
+      )}
       {splits && (
         <div className="stats-splits">
           <h3>Phases · mean of last {splits.count}</h3>
@@ -95,6 +104,7 @@ export const StatsPanel = memo(function StatsPanel({ solves, cube, puzzle, puzzl
       )}
       {onGoal && <Goal solves={solves} goal={goal} onGoal={onGoal} />}
       {pbsOpen && <PbHistory solves={solves} onClose={() => setPbsOpen(false)} />}
+      {compareOpen && <CompareRanges solves={solves} sessions={sessions} puzzle={puzzleId} onClose={() => setCompareOpen(false)} />}
       {open && win && openRow && (
         <AverageDetail label={openRow[0]} which={open.which} win={win} origin={open.el} puzzle={puzzle} cube={cube}
           isBest={(() => { const v = values[rows.indexOf(openRow)]; return v?.best != null && win.value === v.best; })()} onClose={() => setOpen(null)} />

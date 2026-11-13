@@ -170,6 +170,8 @@ body.solving .stage::after { box-shadow: inset 0 0 90px color-mix(in srgb, var(-
 .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 6px; }
 .legend span::before { content: ""; display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 6px; background: currentColor; }
 .legend .l-ao5 { color: var(--accent); }
+.segmented.progress-scope { grid-template-columns: repeat(2, 1fr); margin: 2px 0 8px; }
+.segmented.progress-scope button { padding: 5px 8px; font-size: 12.5px; }
 
 .side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -1033,6 +1035,19 @@ body.solving .stage .splits-line.live b { font-size: 16px; }
 .days-grid .day-today { stroke: var(--ink); stroke-width: 1; }
 
 /* PB history (from Statistics) */
+.stats-links { display: flex; gap: 18px; flex-wrap: wrap; }
+.compare-title { font: 600 clamp(22px, 5vw, 30px) var(--font-ui); margin: 2px 0; }
+.compare-title span { color: var(--muted); font-weight: 500; font-size: 0.7em; }
+.compare-custom { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.compare-custom fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 12px; margin: 0; display: flex; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.compare-custom legend { font: 600 11px var(--font-ui); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 0 4px; }
+.compare-custom label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); flex: 1 1 120px; min-width: 0; }
+.compare-custom input { font: 500 15px var(--font-num); padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); min-width: 0; }
+.compare-table th:not(:first-child) { white-space: nowrap; padding-left: 10px; }
+.compare-table td:not(:first-child) { padding-left: 10px; }
+.compare-table .better { color: var(--ready); }
+.compare-table .worse { color: var(--hold); }
+.compare-note { color: var(--muted); font-size: 12.5px; }
 .pb-link { border: 0; background: none; padding: 0; margin-top: 10px; font: 600 13px var(--font-ui); color: var(--accent); cursor: pointer; }
 .pb-kinds { align-self: flex-start; }
 .pb-kinds button span { font: 500 11px var(--font-num); opacity: 0.7; margin-left: 3px; }

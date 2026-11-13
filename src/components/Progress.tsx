@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { useChartWidth } from "../hooks/useChartWidth";
 import { DNF, eff, fmt, type Solve } from "../lib/stats";
+import type { PuzzleId } from "../lib/puzzles";
+import { ScopeToggle } from "./SolveScope";
+import { useSolveScope } from "../hooks/useSolveScope";
+import type { Session } from "../lib/sessions";
 
 const H = 120, L = 44, R = 8, T = 8, B = 18;
 const DAY_MS = 86_400_000;
@@ -34,10 +38,15 @@ const axisText = (k: number, p: Period) =>
 
 interface Point { k: number; avg: number; best: number; count: number }
 
+
 // The session over its whole life rather than the last 50 solves: your average and best single
 // for each day, week or month (whichever fits how long you've been at it). The average drops the
 // fastest and slowest 5% of the period's times, so one bad solve doesn't swing it; DNFs are left out.
-export function Progress({ solves, goal }: { solves: Solve[]; goal?: number }) {
+// With more than one session for the puzzle, it can also show all of them together (e.g. every
+// 3×3 session), so switching sessions or cubes doesn't hide how you've come along overall.
+export function Progress({ solves: own, goal, sessions, puzzle }: { solves: Solve[]; goal?: number; sessions: Session[]; puzzle: PuzzleId }) {
+  const scope = useSolveScope(own, sessions, puzzle);
+  const { solves } = scope;
   const data = useMemo(() => {
     if (solves.length === 0) return null;
     let lo = Infinity, hi = -Infinity;
@@ -71,6 +80,7 @@ export function Progress({ solves, goal }: { solves: Solve[]; goal?: number }) {
         <span>Progress · by {unit}</span>
         <span>{enough ? `${data.points.length} ${unit}s` : ""}</span>
       </h2>
+      <ScopeToggle scope={scope} puzzle={puzzle} />
       {!enough || !first || !last ? (
         <div className="empty">The chart appears once you've solved on two different days.</div>
       ) : (

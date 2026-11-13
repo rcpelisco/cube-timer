@@ -80,7 +80,18 @@ export default function App() {
   const solves = current.solves;
   const [inspection, setInspection] = useState(initial.inspection);
   const puzzle = toPuzzle(current.puzzle);
-  const { scramble, failed: scrambleFailed, next: nextScramble } = useScramble(puzzle);
+  const { scramble, failed: scrambleFailed, next: nextScramble, back: prevScramble, canGoBack } = useScramble(puzzle);
+  const [copied, setCopied] = useState<"" | "Copied" | "Copy blocked">("");
+  useEffect(() => {
+    if (!copied) return;
+    const id = setTimeout(() => setCopied(""), 1600);
+    return () => clearTimeout(id);
+  }, [copied]);
+  const copyScramble = () => {
+    if (!scramble) return;
+    if (navigator.clipboard) navigator.clipboard.writeText(scramble.moves).then(() => setCopied("Copied"), () => setCopied("Copy blocked"));
+    else setCopied("Copy blocked");
+  };
   // Same breakpoint as the stacked layout in App.css.
   const isPhone = useMediaQuery("(max-width: 620px)");
   const scrambleRef = useRef(scramble);
@@ -312,7 +323,7 @@ export default function App() {
   };
   const setSessionGoal = sessions.setGoal;
   const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);
-  const statsPanel = <StatsPanel solves={solves} cube={current.cube} puzzle={PUZZLES[puzzle].label} puzzleId={puzzle} goal={current.goal} onGoal={setGoal} />;
+  const statsPanel = <StatsPanel solves={solves} sessions={sessions.sessions} cube={current.cube} puzzle={PUZZLES[puzzle].label} puzzleId={puzzle} goal={current.goal} onGoal={setGoal} />;
   const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} cube={current.cube} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote} />;
 
   const sessionProps = {
@@ -370,11 +381,17 @@ export default function App() {
           </div>
           <div className="scramble-actions">
             {/* No new scrambles mid-round, as at a competition (unless one couldn't be made). */}
+            {!compLive && canGoBack && (
+              <button type="button" onClick={prevScramble} aria-label="Previous scramble" title="Bring back the previous scramble">
+                ↶ Previous
+              </button>
+            )}
             {(!compLive || scrambleFailed) && (
               <button type="button" onClick={nextScramble} disabled={!scramble && !scrambleFailed}>
                 {scrambleFailed ? "Try again" : "New scramble"}
               </button>
             )}
+            <button type="button" onClick={copyScramble} disabled={!scramble} aria-live="polite">{copied || "Copy"}</button>
             {!comp.round && <button type="button" className="comp-open" onClick={() => setCompSetup(true)}>Mock comp</button>}
           </div>
         </div>
@@ -422,7 +439,7 @@ export default function App() {
           </div>
         ) : (
           <div className="lower dimmable">
-            <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} />
+            <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} puzzle={puzzle} />
             <div className="panel net">
               <h2>Scrambled state</h2>
               <ScramblePreview puzzle={puzzle} moves={scramble?.moves ?? null} />
@@ -438,7 +455,7 @@ export default function App() {
               <div className="solves-actions"><SolveActions solves={solves} onClear={() => setSolves(() => [])} /></div>
               <StatsHero solves={solves} />
               {statsPanel}
-              <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} />
+              <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} puzzle={puzzle} />
               {solveList}
             </> : <EmptySolves puzzle={puzzle} session={current.name} touch={isTouch} onTimer={() => setView("timer")} />}
           </section>
