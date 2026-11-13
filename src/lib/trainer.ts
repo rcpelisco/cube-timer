@@ -1,11 +1,11 @@
 import type { KPattern } from "cubing/kpuzzle";
-import { ALGS, isAlgSet, puzzleOf, setupFor, type AlgCase, type AlgSet } from "./algs";
+import { ALGS, isAlgSet, OLL, PLL, puzzleOf, setupFor, type AlgCase, type AlgSet } from "./algs";
 import { PBL } from "./algs2x2";
 import { rotationFor, type CrossColor } from "./crossColor";
 import type { LearnStatus } from "./algStatus";
 import { isCrossLevel, isDrill, type CrossLevel, type Drill } from "./drills";
 
-// OLL/PLL trainer: a scramble that leaves a chosen last-layer case, timed per case.
+// Case trainer (F2L, OLL, PLL, COLL, and the 2×2's): a scramble that leaves a chosen case, timed per case.
 //
 // The scramble is a real random-looking one (cubing.js solves the target state, and the scramble
 // is that solution backwards), so it doesn't give the case away the way undoing the algorithm
@@ -20,21 +20,41 @@ const ROTATIONS = ["", "y", "y2", "y'"].flatMap(a => ["", "x", "x2", "x'", "z", 
 
 const centresHome = (p: KPattern) => p.patternData.CENTERS.pieces.every((piece, i) => piece === i);
 
-async function target(alg: string, cross: CrossColor): Promise<KPattern> {
+// What else the cube has on it for the case, done before the case's setup. F2L: a random last
+// layer (any OLL with any PLL), as on a real solve. COLL: the edges in a random order (an edge PLL
+// or none), which is what the algorithm leaves. OLL/PLL: nothing. Done in parts, each from a cube
+// held the standard way (an algorithm can leave the cube turned, e.g. by a wide move).
+function surroundings(set: AlgSet): string[] {
+  if (set === "F2L") return [join(pick(AUF), setupFor(pick(pick(PLL).algs))), join(pick(AUF), setupFor(pick(pick(OLL).algs)))];
+  if (set === "COLL") {
+    const epll = PLL.filter(c => c.group === "Edges only");
+    return Math.random() < 0.2 ? [] : [setupFor(pick(pick(epll).algs))];
+  }
+  return [];
+}
+
+async function target(alg: string, cross: CrossColor, set: AlgSet): Promise<KPattern> {
   const [{ cube3x3x3 }, { Alg }] = await Promise.all([import("cubing/puzzles"), import("cubing/alg")]);
   const kp = await cube3x3x3.kpuzzle();
   // The case as seen with the cross on the bottom, written in the scrambling orientation:
   // turn to the solving orientation, set up the case, turn back.
   const rot = rotationFor(cross);
   const back = rot ? new Alg(rot).invert().toString() : "";
-  let p = kp.defaultPattern().applyAlg(join(rot, pick(AUF), setupFor(alg), pick(AUF), back));
   // Some algorithms include y turns that don't cancel out, which leaves the cube turned. Turn it
-  // back so the centers are home again (same cube, held the standard way).
-  if (!centresHome(p)) {
+  // back so the centers are home again (same cube, held the standard way). This is done after the
+  // surroundings too, so their turns don't move where the case is set up (an F2L pair's slot).
+  const home = (p: KPattern) => {
+    if (centresHome(p)) return p;
     const fix = ROTATIONS.find(r => centresHome(p.applyAlg(r)));
-    if (fix) p = p.applyAlg(fix);
-  }
-  return p;
+    return fix ? p.applyAlg(fix) : p;
+  };
+  const solving = kp.defaultPattern().applyAlg(rot);
+  // The surroundings and case, in the solving orientation (centers home after `rot` is undone).
+  const inSolving = (p: KPattern, moves: string) => home(p.applyAlg(join(moves, back))).applyAlg(rot);
+  let p = solving;
+  for (const part of surroundings(set)) p = inSolving(p, part);
+  p = inSolving(p, join(pick(AUF), setupFor(alg), pick(AUF)));
+  return home(p.applyAlg(back));
 }
 
 // 2×2: there are no centers, so the case is built on the 3×3 model (which also understands
@@ -60,7 +80,7 @@ async function scramble2x2(alg: string, set: AlgSet, cross: CrossColor): Promise
 
 export async function caseScramble(alg: string, cross: CrossColor, set: AlgSet = "OLL"): Promise<string> {
   if (puzzleOf(set) === "2x2") return scramble2x2(alg, set, cross);
-  const p = await target(alg, cross);
+  const p = await target(alg, cross, set);
   const { experimentalSolve3x3x3IgnoringCenters } = await import("cubing/search");
   const solution = await experimentalSolve3x3x3IgnoringCenters(p);
   // cubing.js writes reversed half turns as R2'; show them the usual way.

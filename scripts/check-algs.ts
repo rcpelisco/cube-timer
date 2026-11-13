@@ -1,4 +1,4 @@
-// Checks every OLL/PLL algorithm in src/lib/algs.ts against a real cube model (cubing.js).
+// Checks every algorithm (3×3 F2L, OLL, PLL, COLL; 2×2 OLL, PBL) against a real cube model (cubing.js).
 // Run: npm run check:algs
 //
 // For each case, every listed algorithm must:
@@ -7,10 +7,14 @@
 // - solve the same case as the case's first (standard) algorithm,
 // - have a setup (setupFor) that turns a solved cube into exactly the case it solves.
 // And each set must have every case exactly once (OLL: 57, PLL: 21, up to U turns).
+// F2L (41 cases) and COLL (40) are checked the same way with their own rules (alg-model-more.ts).
 import { Alg } from "cubing/alg";
 import { OLL, PLL, setupFor } from "../src/lib/algs.ts";
 import { caseKey, caseState, problems, solved } from "./alg-model.ts";
 import { OLL2, PBL } from "../src/lib/algs2x2.ts";
+import { F2L } from "../src/lib/algsF2L.ts";
+import { COLL } from "../src/lib/algsCOLL.ts";
+import { collKey, collProblems, collShape, f2lGroup, f2lKey, f2lPlaceOf, f2lProblems } from "./alg-model-more.ts";
 import { allOriented, bottomSolved, validOn2x2, caseState2, corners, fromSolved2, ollKey, pblKey } from "./alg-model-2x2.ts";
 
 let failed = 0;
@@ -25,6 +29,35 @@ for (const [set, list, expected] of [["OLL", OLL, 57], ["PLL", PLL, 21]] as cons
       const errs = problems(set, c.group, alg);
       if (errs.length) { console.log(`✗ ${c.name}: ${errs.join("; ")}   [${alg}]`); failed++; continue; }
       const k = caseKey(set, alg);
+      if (key === null) key = k;
+      else if (k !== key) { console.log(`✗ ${c.name}: "${alg}" solves a different case from "${c.algs[0]}"`); failed++; }
+      const setup = setupFor(alg);
+      if (JSON.stringify(solved.applyAlg(new Alg(setup)).patternData) !== JSON.stringify(caseState(alg).patternData)) {
+        console.log(`✗ ${c.name}: setup "${setup}" doesn't produce the case for "${alg}"`); failed++;
+      }
+    }
+    if (key === null) continue;
+    if (seen.has(key)) { console.log(`✗ ${c.name}: same case as ${seen.get(key)}`); failed++; continue; }
+    seen.set(key, c.name);
+  }
+  const ok = list.length === expected && seen.size === expected;
+  console.log(`${ok ? "✓" : "✗"} ${set}: ${seen.size} distinct cases of ${list.length} listed (expected ${expected})`);
+  if (!ok) failed++;
+}
+// F2L and COLL: each algorithm passes its set's rules, solves the same case as the case's first
+// algorithm, fits the case's group, and has a working setup; every case is there exactly once.
+for (const [set, list, expected] of [["F2L", F2L, 41], ["COLL", COLL, 40]] as const) {
+  const seen = new Map<string, string>();
+  for (const c of list) {
+    if (!c.algs.length) { console.log(`✗ ${c.name}: no algorithms`); failed++; continue; }
+    let key: string | null = null;
+    for (const alg of c.algs) {
+      total++;
+      const errs = set === "F2L" ? f2lProblems(alg) : collProblems(alg);
+      if (errs.length) { console.log(`✗ ${c.name}: ${errs.join("; ")}   [${alg}]`); failed++; continue; }
+      const k = set === "F2L" ? f2lKey(alg) : collKey(alg);
+      const group = set === "F2L" ? f2lGroup(f2lPlaceOf(alg)) : collShape(alg);
+      if (group !== c.group) { console.log(`✗ ${c.name}: is a "${group}" case, listed under "${c.group}"   [${alg}]`); failed++; }
       if (key === null) key = k;
       else if (k !== key) { console.log(`✗ ${c.name}: "${alg}" solves a different case from "${c.algs[0]}"`); failed++; }
       const setup = setupFor(alg);

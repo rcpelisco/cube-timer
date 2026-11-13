@@ -46,11 +46,12 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
 
 ### Algorithms and Trainer
 
-- Algorithms page: all 57 OLL and 21 PLL cases, and 2×2 Ortega (OLL and PBL), with diagrams, up to 4
+- Algorithms page: 3×3 F2L (all 41 cases), OLL (57), PLL (21) and COLL (40), and 2×2 Ortega (OLL and
+  PBL), with diagrams, up to 4
   algorithms each (standard first, pick your own main), setups, named triggers (Sune, Sledgehammer…),
   a 3D cube that plays them, group/status filters, Learning/Learned status, and a cross-color setting
   that recolors the diagrams. Every algorithm is checked on a cube model (`npm run check:algs`).
-- Trainer: scrambles into a random OLL or PLL case from the ones you pick (shown only after the solve,
+- Trainer: scrambles into a random F2L, OLL, PLL or COLL case from the ones you pick (shown only after the solve,
   so recognising it is part of the practice), times per case, favouring slow and little-practised cases.
   Also last-layer and cross drills, and "Drill my worst" for your slowest cases with a before and after.
 
@@ -110,7 +111,7 @@ npm run build
 npx firebase-tools@14.9.0 deploy --only hosting,firestore:rules
 ```
 
-- `check:algs` checks every OLL/PLL algorithm on a cube model (see below).
+- `check:algs` checks every algorithm on a cube model (see below).
 - `build` type-checks and writes the site to `dist/`, including the service worker for offline use.
 - `deploy --only hosting` uploads `dist/`; `firestore:rules` uploads `firestore.rules` (only needed when
   the rules change, but harmless otherwise).
@@ -119,7 +120,7 @@ The build reads the Firebase config from `.env.local`; without it the app builds
 An installed copy on a phone picks up a new deploy the next time it's opened (close and reopen it if it
 still shows the old version).
 
-## Algorithms (OLL/PLL)
+## Algorithms
 
 Algorithm lists live in `scripts/algs-source.txt` (most popular first). To rebuild `src/lib/algs.ts`
 from it and check the result:
@@ -130,6 +131,17 @@ node scripts/build-algs.ts
 
 ```bash
 npm run check:algs
+```
+
+F2L and COLL algorithms are found by search on the cube model and written to `src/lib/algsF2L.ts` and
+`src/lib/algsCOLL.ts` (slow: tens of minutes for COLL):
+
+```bash
+node scripts/find-algs.ts f2l
+```
+
+```bash
+node scripts/find-algs.ts coll
 ```
 
 `build-algs` keeps an algorithm only if it solves the same case as the one already listed for it;

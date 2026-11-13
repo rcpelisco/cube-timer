@@ -60,6 +60,46 @@ export async function llStickers(alg: string): Promise<LLStickers> {
   return result;
 }
 
+// ---------- F2L: the cube from the front-right corner ----------
+// Top, front and right faces as seen looking at the front-right top corner. Each sticker says
+// which face color it shows and whether it's on a last-layer piece (drawn gray for F2L).
+
+export type Face3 = Face | "D";
+export interface Cell { f: Face3; ll: boolean }
+export interface CubeView {
+  U: Cell[][];  // row 0 = back, col 0 = left
+  F: Cell[][];  // row 0 = top, col 0 = left
+  R: Cell[][];  // row 0 = top, col 0 = front
+}
+const cacheView = new Map<string, CubeView>();
+
+export async function cubeView(alg: string): Promise<CubeView> {
+  const hit = cacheView.get(alg);
+  if (hit) return hit;
+  model ??= loadModel();
+  const { solved, invert } = await model;
+  const p = solved.applyAlg(invert(alg)).patternData;
+  const E = p.EDGES, C = p.CORNERS;
+  const e = (slot: number, face: string): Cell => {
+    const k = EDGE_FACES[slot].indexOf(face), piece = E.pieces[slot];
+    return { f: EDGE_FACES[piece][(k + E.orientation[slot]) % 2] as Face3, ll: piece < 4 };
+  };
+  const c = (slot: number, face: string): Cell => {
+    const k = CORNER_FACES[slot].indexOf(face), piece = C.pieces[slot];
+    return { f: CORNER_FACES[piece][(k - C.orientation[slot] + 3) % 3] as Face3, ll: piece < 4 };
+  };
+  const mid = (f: Face3): Cell => ({ f, ll: false });
+  // Slots: edges UF0 UR1 UB2 UL3 DF4 DR5 DB6 DL7 FR8 FL9 BR10 BL11; corners URF0 UBR1 ULB2 UFL3
+  // DFR4 DLF5 DBL6 DRB7.
+  const result: CubeView = {
+    U: [[c(2, "U"), e(2, "U"), c(1, "U")], [e(3, "U"), mid("U"), e(1, "U")], [c(3, "U"), e(0, "U"), c(0, "U")]],
+    F: [[c(3, "F"), e(0, "F"), c(0, "F")], [e(9, "F"), mid("F"), e(8, "F")], [c(5, "F"), e(4, "F"), c(4, "F")]],
+    R: [[c(0, "R"), e(1, "R"), c(1, "R")], [e(8, "R"), mid("R"), e(10, "R")], [c(4, "R"), e(5, "R"), c(7, "R")]],
+  };
+  cacheView.set(alg, result);
+  return result;
+}
+
 // ---------- 2×2 ----------
 // A 2×2 is a 3×3's corners. Undo the algorithm, then turn the whole cube so the centers are home
 // (2×2 algorithms often use x/y/z turns that a 3×3 model would otherwise leave the cube turned by).

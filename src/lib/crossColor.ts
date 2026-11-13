@@ -53,7 +53,7 @@ type Facelet = "regular" | "dim" | "ignored";
 // cubing.js's own OLL/PLL stickerings gray out pieces by identity (the white-face pieces), which
 // is wrong once the cube is turned. This builds the same look for whichever face is on top:
 // OLL shows only the top-color stickers of last-layer pieces; PLL grays the top color and shows
-// the side colors; the first two layers are dimmed in both.
+// the side colors; the first two layers are dimmed in both. F2L and COLL: see stickeringMask.
 // 2×2 (same corner order as the 3×3): OLL shows only the top color on the top layer and dims
 // the bottom; PBL shows everything, since both layers matter.
 export function stickeringMask2x2(set: "OLL2" | "PBL", cross: CrossColor) {
@@ -68,21 +68,25 @@ export function stickeringMask2x2(set: "OLL2" | "PBL", cross: CrossColor) {
   return { orbits: { CORNERS: { pieces: CORNERS.map(piece) } } };
 }
 
-export function stickeringMask(set: "OLL" | "PLL", cross: CrossColor) {
+export function stickeringMask(set: "OLL" | "PLL" | "F2L" | "COLL", cross: CrossColor) {
   const top = TOP_FACE[cross];
-  const piece = (name: string): { facelets: Facelet[] } => ({
+  // F2L: the last layer doesn't matter (gray); the cross, slots and pair show their colors.
+  // COLL: corners show every color; edges only their top color (their places don't matter).
+  const piece = (name: string, edge: boolean): { facelets: Facelet[] } => ({
     facelets: [...name].map(face => {
+      if (set === "F2L") return name.includes(top) ? "ignored" : "regular";
       if (!name.includes(top)) return "dim";
       if (set === "OLL") return face === top ? "regular" : "ignored";
+      if (set === "COLL") return edge && face !== top ? "ignored" : "regular";
       return face === top ? "dim" : "regular";
     }),
   });
   const center = (name: string): { facelets: Facelet[] } =>
-    ({ facelets: [name === top && set === "OLL" ? "regular" : "dim"] });
+    ({ facelets: [set === "F2L" || (name === top && (set === "OLL" || set === "COLL")) ? "regular" : "dim"] });
   return {
     orbits: {
-      EDGES: { pieces: EDGES.map(piece) },
-      CORNERS: { pieces: CORNERS.map(piece) },
+      EDGES: { pieces: EDGES.map(n => piece(n, true)) },
+      CORNERS: { pieces: CORNERS.map(n => piece(n, false)) },
       CENTERS: { pieces: CENTERS.map(center) },
     },
   };

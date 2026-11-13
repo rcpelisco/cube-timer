@@ -35,12 +35,16 @@ function loadTab(): AlgSet {
 }
 
 const PLACEHOLDER: Record<AlgSet, string> = {
+  F2L: "Filter: 12, edge in slot…",
+  COLL: "Filter: sune, pi 3…",
   OLL: "Filter: 21, dot, line…",
   PLL: "Filter: T, J, edges…",
   OLL2: "Filter: sune, H, pi…",
   PBL: "Filter: adj, diag…",
 };
 const INTRO: Record<AlgSet, string> = {
+  F2L: "Pair up a corner and edge and put them in the front-right slot, with the cross on the bottom. Gray stickers don't matter for the case. Numbered by where the pieces are, so the numbers differ from other sites'.",
+  COLL: "With the first two layers done and the top edges oriented (a cross on top), solve the corners in one go, leaving at most an edge PLL (U, H or Z perm). Edges' side colors are gray: they don't matter for the case.",
   OLL: "Orient the last layer: make the top all one color. Gray stickers don't matter for the case.",
   PLL: "Permute the last layer: move the oriented pieces into place.",
   OLL2: "Ortega step 2: with one face solved on the bottom, make the top all one color. Gray stickers don't matter for the case.",
