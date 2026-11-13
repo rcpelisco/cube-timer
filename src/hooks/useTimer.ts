@@ -241,7 +241,7 @@ export function useTimer({
       if (st.swallowUp || e.code === "Space") pressUp();
     };
     const onStageDown = (e: PointerEvent) => {
-      if ((e.target as Element).closest("button") || e.button !== 0) return;
+      if (!opts.current.enabled || (e.target as Element).closest("button, input, textarea, select") || e.button !== 0) return;
       e.preventDefault();
       st.pointerArmed = true;
       st.downX = e.clientX;

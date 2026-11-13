@@ -41,6 +41,8 @@ import { TimeDisplay } from "./components/TimeDisplay";
 import { InspectRing } from "./components/InspectRing";
 import { MockCompBar, MockCompHistory, MockCompResult, MockCompSetup } from "./components/MockComp";
 import { SolveActions } from "./components/SolveActions";
+import { TypedEntry } from "./components/TypedEntry";
+import { typingPref } from "./lib/typedTime";
 import "./App.css";
 
 // Pages other than the timer load on demand, so a cold start only downloads the timer. They're
@@ -165,7 +167,10 @@ export default function App() {
   const phaseNames = usePhases(puzzle);
   const phases = phaseNames.length || 1;
   const timerInspection = inspection || compLive;
-  const timer = useTimer({ stageRef, inspection: timerInspection, onFinish, enabled: showTimer, phases });
+  // Typing mode: times are typed in, so the page's timer doesn't listen for keys and taps.
+  const [typing] = useBoolPref(typingPref);
+  const timer = useTimer({ stageRef, inspection: timerInspection, onFinish, enabled: showTimer && !typing, phases });
+  const addTyped = useCallback((t: number, pen: Penalty) => onFinish(t, pen, []), [onFinish]);
   const active = timer.phase !== "idle";
   const phaseRef = useRef(timer.phase);
   useEffect(() => { phaseRef.current = timer.phase; }, [timer.phase]);
@@ -406,7 +411,7 @@ export default function App() {
           {pbKinds.length > 0 && !active && (
             <div className="pb-badge" role="status">New PB · {pbKinds.join(", ")}</div>
           )}
-          <div className="hint dimmable">{hint}</div>
+          {typing ? <TypedEntry onAdd={addTyped} isTouch={isTouch} /> : <div className="hint dimmable">{hint}</div>}
           <div className="last-actions dimmable">
             {last && !active && confirming && (
               <div className="delete-confirm" role="alertdialog" aria-label="Delete this solve?">

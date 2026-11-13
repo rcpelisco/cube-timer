@@ -14,6 +14,8 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
   4×4's Centers · Edges · 3×3), with phase names set per puzzle.
 - Focus mode (full-screen timer while solving), an option to hide the time while solving, vibration on
   green, splits and stop, and the screen kept awake on timer pages.
+- Type in times instead (a switch in Settings), e.g. from a Stackmat: `12.34`, `1:02.34` or `1234`, with
+  `+` for +2 or `DNF`; each uses the scramble shown.
 - Shortcuts for the last solve: `2` / `+` for +2, `D` for DNF, `N` for a note, Backspace to delete.
 - A sub-X goal and a daily solve target (a ring that fills as you go), confetti on a new PB.
 - Mock competition: an Ao5 or Mo3 round run the WCA way, with optional cutoff and time limit; finished

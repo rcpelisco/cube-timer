@@ -11,6 +11,7 @@ import { exportFileName, saveTextFile } from "../lib/saveFile";
 import { ImportCsTimer } from "./ImportCsTimer";
 import { useBoolPref } from "../lib/boolPref";
 import { inspectionCallsPref } from "../lib/inspectionCalls";
+import { typingPref } from "../lib/typedTime";
 import { canVibrate, hapticsPref } from "../lib/haptics";
 import { SplitPhasesSetting } from "./SplitPhasesSetting";
 import { AccentSetting } from "./AccentSetting";
@@ -37,6 +38,7 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
   const [hideTime, setHideTime] = useHideTime();
   const [showTriggers, setShowTriggers] = useShowTriggers();
   const [calls, setCalls] = useBoolPref(inspectionCallsPref);
+  const [typing, setTyping] = useBoolPref(typingPref);
   const [haptics, setHaptics] = useBoolPref(hapticsPref);
   const puzzle = toPuzzle(sessions.list.find(x => x.id === sessions.currentId)?.puzzle);
   const [target, setTarget] = useDailyTarget();
@@ -46,6 +48,14 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
       <h1 className="settings-title">Settings</h1>
       <div className="panel settings-group">
         <h2>Timer</h2>
+        <label className="setting-row" htmlFor="opt-typing">
+          <span>
+            <b>Type in times</b>
+            <small>Enter times by hand instead of timing here, e.g. from a Stackmat. Each uses the scramble shown.</small>
+          </span>
+          <input type="checkbox" className="switch" id="opt-typing" checked={typing}
+            onChange={e => setTyping(e.target.checked)} />
+        </label>
         <label className="setting-row" htmlFor="opt-inspect-settings">
           <span>
             <b>15 s inspection</b>
