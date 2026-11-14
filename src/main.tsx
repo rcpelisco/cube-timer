@@ -19,6 +19,21 @@ if (typeof (document as Partial<Document>).startViewTransition !== "function") {
   document.documentElement.classList.add("no-vt");
 }
 
+// iOS home-screen app: some iOS versions (26 and 27 so far; WebKit bug 301994) end the app above
+// the home indicator and draw a strip of their own below it that the page can't paint, while
+// still reporting a bottom safe-area inset. The tab bar would then leave that space empty twice,
+// so it drops its home-indicator padding when the app's height falls short of the screen's.
+// Upright only: iOS reports the screen's size as if held upright.
+const standalone = matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
+if (standalone) {
+  const check = () => {
+    const upright = innerHeight > innerWidth;
+    document.documentElement.classList.toggle("ios-short", upright && screen.height - innerHeight > 20);
+  };
+  check();
+  addEventListener("resize", check);
+}
+
 // iOS Safari only applies :active (the press feedback on buttons) once the page listens for touches.
 document.addEventListener("touchstart", () => {}, { passive: true });
 

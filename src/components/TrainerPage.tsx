@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction, type CSSProperties } from "react";
 import { puzzleOf, SET_LABEL, SETS, type AlgCase, type AlgPuzzle, type AlgSet } from "../lib/algs";
 import { mainAlg } from "../lib/algChoice";
 import type { AlgPrefs } from "../lib/algPrefs";
@@ -77,7 +77,7 @@ export function TrainerPage({ prefs: { prefs }, trainer: { store, setStore } }: 
                 onClick={() => { if (p !== puzzle) setSet(SETS[p][0]); }}>{p.replace("x", "×")}</button>
             ))}
           </div>
-          <div className="segmented" role="radiogroup" aria-label="What to practise" style={{ gridTemplateColumns: `repeat(${modes.length}, auto)` }}>
+          <div className="segmented trainer-modes" role="radiogroup" aria-label="What to practise" style={{ "--modes": modes.length } as CSSProperties}>
             {modes.map(m => (
               <button key={m.id} type="button" role="radio" aria-checked={m.on} className={m.on ? "on" : ""}
                 onClick={m.pick}>{m.label}</button>
