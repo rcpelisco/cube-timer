@@ -100,7 +100,10 @@ export function DrillRun({ drill, level, plan, cross, choices, times, setStore }
   ].filter(Boolean).join(" ");
 
   const front = COLOR_NAME[crossInfo.faces.F];
-  const hold = `then hold ${crossInfo.top} on top${front && front !== "green" ? `, ${front} in front` : ""}`;
+  // How to hold the cube for the cross solution: it's worked out with the cross on the bottom and
+  // this front (crossColor.ts), so both faces are named.
+  const holding = `${crossInfo.top} on top, ${front} in front`;
+  const hold = `then hold ${holding}`;
   const lvl = CROSS_LEVELS.find(l => l.id === level)!;
   const title = drill === "LL" ? "Last layer" : `${crossInfo.label} cross · ${lvl.label.toLowerCase()} (${lvl.note})`;
 
@@ -138,8 +141,10 @@ export function DrillRun({ drill, level, plan, cross, choices, times, setStore }
             : <div className="trainer-cross">
                 <h2>Last cross</h2>
                 <b className="trainer-case">{last.info.cross.moves} {last.info.cross.moves === 1 ? "move" : "moves"} <span>{lastText}</span></b>
+                <small>Scramble, white top, green front:</small>
+                <code className="trainer-alg">{last.info.cross.scramble}</code>
                 {last.info.cross.moves > 0 && <>
-                  <small>Shortest, holding {crossInfo.top} on top:</small>
+                  <small>Shortest, holding {holding}:</small>
                   <code className="trainer-alg">{last.info.cross.solution}</code>
                 </>}
               </div>}
