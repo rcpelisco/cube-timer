@@ -38,6 +38,9 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
 - Single, Mo3, Ao5, Ao12, Ao100 with WCA trimming, plus averages of any size you add (e.g. Ao50,
   Ao1000). Tap one to see the solves behind it.
 - +2 / DNF / delete per solve, and a detail view with its scramble, the averages it ended and a note.
+- Select solves (tap rows, or shift-click a range) to delete them or move them to another session for the
+  same puzzle. Deleting or moving solves, clearing a session or deleting a session shows Undo for a few
+  seconds (or Ctrl/⌘+Z).
 - Charts: a recent trend with Ao5, progress by day, week or month (for the session or every session
   for the puzzle), and how times are spread.
 - Compare dates: this week against last, this month against last, the last 30 days against the 30

@@ -18,6 +18,11 @@ export function useSessions(initial: { sessions: Session[]; currentId: string })
     setSessionsRaw(list.length ? list : [newSession("Session 1")]);
   }, []);
 
+  // Any change to the whole list, worked out from its latest state (used by undo).
+  const change = useCallback((fn: (list: Session[]) => Session[]) => {
+    setSessionsRaw(list => { const next = fn(list); return next.length ? next : [newSession("Session 1")]; });
+  }, []);
+
   const setSolves = useCallback((fn: (list: Solve[]) => Solve[]) => {
     setSessionsRaw(list => list.map(s => (s.id === id ? { ...s, solves: fn(s.solves) } : s)));
   }, [id]);
@@ -63,5 +68,5 @@ export function useSessions(initial: { sessions: Session[]; currentId: string })
     });
   }, [id]);
 
-  return { sessions, current, setSessions, setSolves, select: setCurrentId, create, update, remove, setGoal, keepRound, removeRound };
+  return { sessions, current, setSessions, change, setSolves, select: setCurrentId, create, update, remove, setGoal, keepRound, removeRound };
 }

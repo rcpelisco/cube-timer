@@ -43,6 +43,9 @@ import { MockCompBar, MockCompHistory, MockCompResult, MockCompSetup } from "./c
 import { SolveActions } from "./components/SolveActions";
 import { TypedEntry } from "./components/TypedEntry";
 import { typingPref } from "./lib/typedTime";
+import { deleteSession, deleteSolves, moveSolves, type Edit, type Undo } from "./lib/solveEdits";
+import { solveKey, type Session } from "./lib/sessions";
+import { UndoToast } from "./components/UndoToast";
 import "./App.css";
 
 // Pages other than the timer load on demand, so a cold start only downloads the timer. They're
@@ -209,7 +212,47 @@ export default function App() {
   // Stable callbacks, so the memoised stats and solve list skip the timer's per-frame re-renders.
   const setPenalty = useCallback((i: number, pen: Penalty) =>
     setSolves(list => list.map((s, j) => (j === i ? { ...s, pen: s.pen === pen ? 0 : pen } : s))), [setSolves]);
-  const deleteSolve = useCallback((i: number) => setSolves(list => list.filter((_, j) => j !== i)), [setSolves]);
+  // Deletes and moves, each undoable for a few seconds (lib/solveEdits.ts). The edit is worked out
+  // again from the latest sessions when it's applied; the undo is from the sessions as shown.
+  const [undo, setUndo] = useState<Undo | null>(null);
+  const sessionsRef = useRef(sessions.sessions);
+  sessionsRef.current = sessions.sessions;
+  const changeSessions = sessions.change;
+  const run = useCallback((fn: (list: Session[]) => Edit) => {
+    const edit = fn(sessionsRef.current);
+    if (!edit.undo) return;
+    changeSessions(list => fn(list).sessions);
+    setUndo(edit.undo);
+  }, [changeSessions]);
+  const undoRef = useRef(undo);
+  undoRef.current = undo;
+  const doUndo = useCallback(() => {
+    const u = undoRef.current;
+    if (!u) return;
+    changeSessions(u.apply);
+    setUndo(null);
+  }, [changeSessions]);
+  const dismissUndo = useCallback(() => setUndo(null), []);
+  const sid = current.id;
+  const deleteSolve = useCallback((i: number) => {
+    const s = solvesRef.current[i];
+    if (s) run(list => deleteSolves(list, sid, new Set([solveKey(s)])));
+  }, [run, sid]);
+  const deleteMany = useCallback((keys: Set<string>) => run(list => deleteSolves(list, sid, keys)), [run, sid]);
+  const moveMany = useCallback((keys: Set<string>, toId: string) => run(list => moveSolves(list, sid, toId, keys)), [run, sid]);
+  const clearSolves = useCallback(() => run(list => deleteSolves(list, sid, new Set(solvesRef.current.map(solveKey)), true)), [run, sid]);
+  const removeSessionRaw = sessions.remove;
+  const removeSession = useCallback((id: string) => {
+    const edit = deleteSession(sessionsRef.current, id);
+    if (!edit.undo) return;
+    removeSessionRaw(id);
+    setUndo(edit.undo);
+  }, [removeSessionRaw]);
+  // Sessions solves can move to: the others for the same puzzle.
+  const moveTargets = useMemo(
+    () => sessions.sessions.filter(s => s.id !== sid && toPuzzle(s.puzzle) === puzzle).map(s => ({ id: s.id, name: s.name })),
+    [sessions.sessions, sid, puzzle],
+  );
   // The last solve's detail, opened from the Note button under the time.
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteAt, setNoteAt] = useState<number | null>(null);
@@ -336,11 +379,12 @@ export default function App() {
   const setSessionGoal = sessions.setGoal;
   const setGoal = useCallback((goal: number | null) => setSessionGoal(current.id, goal), [setSessionGoal, current.id]);
   const statsPanel = <StatsPanel solves={solves} sessions={sessions.sessions} cube={current.cube} puzzle={PUZZLES[puzzle].label} puzzleId={puzzle} goal={current.goal} onGoal={setGoal} />;
-  const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} cube={current.cube} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote} />;
+  const solveList = <SolveList key={current.id} solves={solves} puzzle={puzzle} cube={current.cube} onPenalty={setPenalty} onDelete={deleteSolve} onNote={setNote}
+    targets={moveTargets} onDeleteMany={deleteMany} onMove={moveMany} />;
 
   const sessionProps = {
     list: sessions.sessions, currentId: current.id, onSelect: sessions.select,
-    onCreate: sessions.create, onUpdate: sessions.update, onDelete: sessions.remove,
+    onCreate: sessions.create, onUpdate: sessions.update, onDelete: removeSession,
   };
 
   const page = (
@@ -358,7 +402,7 @@ export default function App() {
         {view === "train" && <TrainerPage prefs={algPrefs} trainer={trainer} />}
         {view === "settings" && (
           <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
-            solveActions={{ solves, onClear: () => setSolves(() => []) }} />
+            solveActions={{ solves, onClear: clearSolves }} />
         )}
       </Suspense>
 
@@ -472,7 +516,7 @@ export default function App() {
         view === "solves" && (
           <section className="solves-page">
             {solves.length ? <>
-              <div className="solves-actions"><SolveActions solves={solves} onClear={() => setSolves(() => [])} /></div>
+              <div className="solves-actions"><SolveActions solves={solves} onClear={clearSolves} /></div>
               <StatsHero solves={solves} />
               {statsPanel}
               <TrendChart solves={solves} goal={current.goal} sessions={sessions.sessions} puzzle={puzzle} />
@@ -490,14 +534,16 @@ export default function App() {
   // Phones: the page scrolls inside the shell and the tab bar is pinned below it (see App.css).
   // The chosen background photo, behind everything on the timer pages.
   const bg = hasBg && <div className="timer-bg-layer" aria-hidden="true" />;
+  const toast = undo && !active && <UndoToast undo={undo} onUndo={doUndo} onDismiss={dismissUndo} />;
   return isPhone ? (
     <div className="phone-shell">
       {bg}
       <div className="page-area">
         <div className="page-scroll">{page}</div>
         <ScrollTop phone />
+        {toast}
       </div>
       <TabBar view={view} onView={setView} />
     </div>
-  ) : <>{bg}{page}<ScrollTop phone={false} /></>;
+  ) : <>{bg}{page}<ScrollTop phone={false} />{toast}</>;
 }

@@ -60,10 +60,11 @@ export function nextName(sessions: Session[]): string {
   return `Session ${n}`;
 }
 
-// Merge used on sign-in: cloud sessions win, plus anything local that is newer than the last sync.
-const solveKey = (s: Solve) => `${s.at}:${s.t}`;
+// Identifies a solve within a session (its time stamp and raw time), across edits and devices.
+export const solveKey = (s: Solve) => `${s.at}:${s.t}`;
 const isDefaultName = (name: string) => /^Session \d+$/.test(name);
 
+// Merge used on sign-in: cloud sessions win, plus anything local that is newer than the last sync.
 export function mergeSessions(remote: Session[], local: Session[], since: number): Session[] {
   const merged = remote.map(r => {
     const l = local.find(s => s.id === r.id);
