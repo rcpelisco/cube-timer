@@ -1,8 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { bestRolling, DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
 import { FORMATS, limitPenalty, moveOldRounds, pastRounds, roundStatus, toRecord, useMockComp } from "./lib/mockComp";
 import { fireConfetti } from "./lib/confetti";
-import { load, save, wipeDevice } from "./lib/storage";
+import { load, save, saveFailure, wipeDevice } from "./lib/storage";
 import { firebaseEnabled, loadFirebase, type FirebaseClient } from "./lib/firebase";
 import { PUZZLES, toPuzzle } from "./lib/puzzles";
 import { importCsTimer } from "./lib/csTimer";
@@ -63,7 +63,7 @@ if (typeof window !== "undefined") {
 
 // Removes this person's data from the device, including Firestore's offline copy, and reloads.
 async function clearDevice(fb: FirebaseClient) {
-  wipeDevice();
+  await wipeDevice();
   try {
     await fb.terminate(fb.db);
     await fb.clearIndexedDbPersistence(fb.db);
@@ -71,12 +71,17 @@ async function clearDevice(fb: FirebaseClient) {
   location.reload();
 }
 
-const loaded = load();
+// The saved state, read once (main.tsx loads it from storage before the app renders).
 // Mock rounds used to be kept apart from the sessions; they move onto them once.
-const initial = { ...loaded, sessions: moveOldRounds(loaded.sessions) };
+let initialState: ReturnType<typeof load> | null = null;
+const getInitial = () => {
+  if (!initialState) { const loaded = load(); initialState = { ...loaded, sessions: moveOldRounds(loaded.sessions) }; }
+  return initialState;
+};
 const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
 
 export default function App() {
+  const initial = getInitial();
   const sessions = useSessions(initial);
   const { current, setSolves } = sessions;
   const solves = current.solves;
@@ -167,6 +172,8 @@ export default function App() {
   const phaseNames = usePhases(puzzle);
   const phases = phaseNames.length || 1;
   const timerInspection = inspection || compLive;
+  // A save to this device failed (storage full or blocked): warned about above the scramble.
+  const saveFailed = useSyncExternalStore(saveFailure.subscribe, saveFailure.get);
   // Typing mode: times are typed in, so the page's timer doesn't listen for keys and taps.
   const [typing] = useBoolPref(typingPref);
   const timer = useTimer({ stageRef, inspection: timerInspection, onFinish, enabled: showTimer && !typing, phases });
@@ -357,6 +364,14 @@ export default function App() {
 
       {/* The timer page stays mounted (hidden) on other pages so its state and scramble keep. */}
       <section className="main" hidden={!showTimer}>
+        {saveFailed && (
+          <div className="panel save-failed" role="alert">
+            <b>Your latest solves couldn't be saved on this device.</b>{" "}
+            {auth.user
+              ? "They're still synced to your account, but the device's storage may be full."
+              : "The device's storage may be full. Sign in to sync them, or export them from Settings."}
+          </div>
+        )}
         {compRound && compStatus && (compStatus.done
           ? <MockCompResult round={compRound} status={compStatus} sessionBest={compBest} puzzle={puzzle} cube={current.cube}
               onAgain={() => startRound(compRound.format, compRound.cutoff, compRound.limit)}

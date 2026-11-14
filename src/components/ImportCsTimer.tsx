@@ -1,12 +1,13 @@
 import { useRef, useState } from "react";
 import { exportCsTimer, type ImportResult } from "../lib/csTimer";
+import { exportCsv } from "../lib/csv";
 import { PUZZLES } from "../lib/puzzles";
 import type { Session } from "../lib/sessions";
 import { exportFileName, saveTextFile } from "../lib/saveFile";
 
 const n = (x: number, word: string) => `${x.toLocaleString()} ${word}${x === 1 ? "" : "s"}`;
 
-// Settings card: import a csTimer export file, or export every session in the same format.
+// Settings card: import a csTimer export file, or export every session as a csTimer file or a CSV.
 export function ImportCsTimer({ sessions, onImport }: { sessions: Session[]; onImport: (text: string) => ImportResult }) {
   const input = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -15,9 +16,12 @@ export function ImportCsTimer({ sessions, onImport }: { sessions: Session[]; onI
   const [exportNote, setExportNote] = useState("");
   const solveCount = sessions.reduce((a, s) => a + s.solves.length, 0);
 
-  const exportFile = async () => {
+  const exportFile = async (format: "cstimer" | "csv") => {
     try {
-      if (await saveTextFile(exportFileName(), exportCsTimer(sessions))) {
+      const saved = format === "csv"
+        ? await saveTextFile(exportFileName(undefined, "csv"), exportCsv(sessions), "text/csv")
+        : await saveTextFile(exportFileName(), exportCsTimer(sessions));
+      if (saved) {
         setExportNote(`Exported ${n(solveCount, "solve")} from ${n(sessions.length, "session")}.`);
       }
     } catch {
@@ -76,10 +80,13 @@ export function ImportCsTimer({ sessions, onImport }: { sessions: Session[]; onI
       <div className="setting-row export-row">
         <span>
           <b>Export</b>
-          <small>Saves all {n(sessions.length, "session")} ({n(solveCount, "solve")}) as a csTimer file, which csTimer or this app can import. To export one session, use the export button on it under Sessions.</small>
+          <small>Saves all {n(sessions.length, "session")} ({n(solveCount, "solve")}). A csTimer file can be imported into csTimer or this app; a spreadsheet (CSV) file opens in Excel, Numbers or Google Sheets, one row per solve. To export one session as a csTimer file, use the export button on it under Sessions.</small>
         </span>
       </div>
-      <button type="button" className="wide" disabled={!solveCount} onClick={exportFile}>Export to file</button>
+      <div className="export-buttons">
+        <button type="button" className="wide" disabled={!solveCount} onClick={() => exportFile("cstimer")}>csTimer file</button>
+        <button type="button" className="wide" disabled={!solveCount} onClick={() => exportFile("csv")}>Spreadsheet (CSV)</button>
+      </div>
       {exportNote && <p className="setting-note" role="status">{exportNote}</p>}
     </div>
   );

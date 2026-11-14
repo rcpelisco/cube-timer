@@ -634,6 +634,8 @@ body.solving .tabbar { visibility: hidden; }
 .segmented button { border: 0; background: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 4px; border-radius: 6px; font-weight: 600; color: var(--muted); }
 .segmented button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / 0.15); }
 button.wide { width: 100%; justify-content: center; padding: 10px; font-size: 15px; }
+.export-buttons { display: flex; gap: 8px; }
+.export-buttons button.wide { flex: 1; width: auto; }
 .account-card { display: flex; align-items: center; gap: 12px; }
 .account-card img, .account-card .avatar-fallback { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--bg); }
 .account-card span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
@@ -1261,3 +1263,7 @@ body.solving .splits-badge { display: none; }
 .delete-device { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 13.5px; }
 .delete-cloud-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .delete-cloud-actions .strong { font-weight: 600; }
+
+/* A save to this device failed (lib/storage.ts saveFailure). */
+.panel.save-failed { border-color: var(--hold); font-size: 13.5px; line-height: 1.45; }
+.panel.save-failed b { color: var(--hold); }

@@ -6,6 +6,7 @@ import "@fontsource-variable/chivo-mono/wght.css";
 import App from "./App.tsx";
 import { applyTheme, themeStore } from "./lib/theme";
 import { watchCspReports } from "./lib/cspReports";
+import { loadStored } from "./lib/storage";
 
 // Before anything renders, so a blocked request during start-up is caught too.
 watchCspReports();
@@ -24,8 +25,11 @@ document.addEventListener("touchstart", () => {}, { passive: true });
 // Cache the app for offline use and pick up new versions on next launch.
 registerSW({ immediate: true });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+// Solves are read from IndexedDB first (a few milliseconds), so the app starts with them.
+loadStored().finally(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});

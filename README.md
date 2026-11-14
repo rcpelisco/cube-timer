@@ -44,7 +44,7 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
   before, or two ranges you pick, with solves, mean, average, best single, Ao5, Ao12 and DNF rate.
 - PB history (best single and averages over time), practice days for the last six months with your
   streak, and share cards for results.
-- Copy times, clear a session, and import or export csTimer files.
+- Copy times, clear a session, import or export csTimer files, and export every solve as a spreadsheet (CSV) with dates, penalties, splits, scrambles and notes.
 
 ### Algorithms and Trainer
 
@@ -64,7 +64,8 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
 
 ### Data, sync and privacy
 
-- Solves are saved in the browser (localStorage). Works offline once loaded.
+- Solves are saved in the browser (IndexedDB, with room for any history; older versions' localStorage
+  data moves over by itself). Works offline once loaded, and warns if a save ever fails.
 - Signed in with Google, solves, sessions, algorithm progress and Trainer times sync between devices.
   Each account's data stays separate on a shared device.
 - Settings has a privacy note, Sign out and remove from this device, and Delete account (its cloud data
