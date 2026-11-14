@@ -6,20 +6,12 @@ import { join } from "node:path";
 import type { Plugin } from "vite";
 
 // The headers Firebase Hosting sends on every page (firebase.json), so `vite preview` serves the
-// built app under the same security policy. CSP_ENFORCE=1 turns the report-only policy into a
-// real one, to see what would break before switching it on in firebase.json.
+// built app under the same security policy (the Content Security Policy included): what would be
+// blocked on the live site is blocked there too, and listed at the bottom of Settings.
 function hostingHeaders(): Record<string, string> {
   const hosting = JSON.parse(readFileSync(new URL("./firebase.json", import.meta.url), "utf8")).hosting;
   const all = hosting.headers.find((h: { source: string }) => h.source === "**")?.headers ?? [];
-  const out: Record<string, string> = {};
-  for (const { key, value } of all as { key: string; value: string }[]) {
-    if (key === "Content-Security-Policy-Report-Only" && process.env.CSP_ENFORCE) {
-      out["Content-Security-Policy"] = `${value}; ${out["Content-Security-Policy"] ?? ""}`.replace(/; $/, "");
-    } else if (key === "Content-Security-Policy" && out["Content-Security-Policy"]) {
-      out[key] = `${out[key]}; ${value}`;
-    } else out[key] = value;
-  }
-  return out;
+  return Object.fromEntries((all as { key: string; value: string }[]).map(({ key, value }) => [key, value]));
 }
 
 // Writes licenses.txt next to the app: the license of every package bundled into it (found from

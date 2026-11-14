@@ -1,4 +1,4 @@
-// What the Content Security Policy (firebase.json) blocked, or would block while it's report-only,
+// What the Content Security Policy (firebase.json) blocked,
 // kept on this device so it can be checked on a phone without developer tools: Settings lists them
 // at the bottom when there are any. Each distinct directive and address is kept once, newest first.
 const KEY = "cubeTimer.cspReports";
