@@ -11,7 +11,8 @@
     "preview:csp": "vite build && CSP_ENFORCE=1 vite preview",
     "check:algs": "node scripts/check-algs.ts",
     "test:rules": "npx firebase-tools@14.9.0 emulators:exec --only firestore --project demo-cube-timer \"node scripts/test-rules.ts\"",
-    "deploy": "npm run check:algs && npm run lint && npm run build && npx firebase-tools@14.9.0 deploy --only hosting,firestore:rules"
+    "deploy": "npm run check:algs && npm test && npm run lint && npm run build && npx firebase-tools@14.9.0 deploy --only hosting,firestore:rules",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
@@ -31,10 +32,12 @@
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
+    "fake-indexeddb": "^6.0.1",
     "globals": "^16.0.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^6.4.6",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^3.2.4"
   }
 }

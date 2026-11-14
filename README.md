@@ -103,6 +103,10 @@ npm run check:algs
 ```
 
 ```bash
+npm test
+```
+
+```bash
 npm run lint
 ```
 
@@ -115,6 +119,9 @@ npx firebase-tools@14.9.0 deploy --only hosting,firestore:rules
 ```
 
 - `check:algs` checks every algorithm on a cube model (see below).
+- `test` runs the unit tests (Vitest). They cover saving on the device (`src/lib/storage.test.ts`):
+  loading, moving older localStorage data into IndexedDB, saving, the fallbacks when IndexedDB is
+  missing or stuck, the warning when a save fails, and wiping the device.
 - `build` type-checks and writes the site to `dist/`, including the service worker for offline use.
 - `deploy --only hosting` uploads `dist/`; `firestore:rules` uploads `firestore.rules` (only needed when
   the rules change, but harmless otherwise).
