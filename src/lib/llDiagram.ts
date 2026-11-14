@@ -88,7 +88,8 @@ export async function cubeView(alg: string): Promise<CubeView> {
     const k = CORNER_FACES[slot].indexOf(face), piece = C.pieces[slot];
     return { f: CORNER_FACES[piece][(k - C.orientation[slot] + 3) % 3] as Face3, ll: piece < 4 };
   };
-  const mid = (f: Face3): Cell => ({ f, ll: false });
+  // Centers stay put; the top one counts as last layer (gray), since it doesn't matter for F2L.
+  const mid = (f: Face3): Cell => ({ f, ll: f === "U" });
   // Slots: edges UF0 UR1 UB2 UL3 DF4 DR5 DB6 DL7 FR8 FL9 BR10 BL11; corners URF0 UBR1 ULB2 UFL3
   // DFR4 DLF5 DBL6 DRB7.
   const result: CubeView = {

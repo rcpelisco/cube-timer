@@ -72,7 +72,7 @@ export function stickeringMask2x2(set: "OLL2" | "PBL", cross: CrossColor) {
 
 export function stickeringMask(set: "OLL" | "PLL" | "F2L" | "COLL", cross: CrossColor) {
   const top = TOP_FACE[cross];
-  // F2L: the last layer doesn't matter (gray); the cross, slots and pair show their colors.
+  // F2L: the last layer doesn't matter (gray, its center too); the cross, slots and pair show their colors.
   // COLL: corners show every color; edges only their top color (their places don't matter).
   const piece = (name: string, edge: boolean): { facelets: Facelet[] } => ({
     facelets: [...name].map(face => {
@@ -84,7 +84,7 @@ export function stickeringMask(set: "OLL" | "PLL" | "F2L" | "COLL", cross: Cross
     }),
   });
   const center = (name: string): { facelets: Facelet[] } =>
-    ({ facelets: [set === "F2L" || (name === top && (set === "OLL" || set === "COLL")) ? "regular" : "dim"] });
+    ({ facelets: [set === "F2L" ? (name === top ? "ignored" : "regular") : name === top && (set === "OLL" || set === "COLL") ? "regular" : "dim"] });
   return {
     orbits: {
       EDGES: { pieces: EDGES.map(n => piece(n, true)) },
