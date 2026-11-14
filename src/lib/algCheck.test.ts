@@ -36,9 +36,18 @@ describe("checkAlg", () => {
     expect((await checkAlg(c, "R U R' U'", [])).ok).toBe(false);
   });
 
-  it("checks 4×4 parity on a 4×4", async () => {
+  it("accepts a 4×4 parity algorithm that leaves a 3×3 last layer, and rejects one that doesn't fix it", async () => {
+    const lucas = "Rw U2 x Rw U2 Rw U2 Rw' U2 Lw U2 Rw' U2 Rw U2 Rw' U2 Rw'";
+    expect((await ok("PAR4", "par4-oll", lucas)).ok).toBe(true);
+    expect((await ok("PAR4", "par4-oll", "Rw2 B2 U2 Lw U2 Rw' U2 Rw U2 F2 Rw F2 Lw' B2 Rw2")).ok).toBe(true);
     expect((await ok("PAR4", "par4-pll", "2R2 U2 2R2 Uw2 2R2 Uw2 U2")).ok).toBe(true);
-    expect((await ok("PAR4", "par4-oll", "Rw2 B2 U2 Lw U2 Rw' U2 Rw U2 F2 Rw F2 Lw' B2 Rw2")).ok).toBe(false);
+    // The wrong parity, or none, leaves it there.
+    expect((await ok("PAR4", "par4-pll", lucas)).ok).toBe(false);
+    expect((await ok("PAR4", "par4-oll", "2R2 U2 2R2 Uw2 2R2 Uw2")).ok).toBe(false);
+    expect((await ok("PAR4", "par4-oll", "R U R' U R U2 R'")).ok).toBe(false);
+    // Fixing the parity but breaking the centers or the layers below doesn't count.
+    expect((await ok("PAR4", "par4-oll", `${lucas} 2R`)).ok).toBe(false);
+    expect((await ok("PAR4", "par4-oll", `${lucas} R`)).ok).toBe(false);
   });
 
   it("tidies quotes, spaces and R2'", async () => {
