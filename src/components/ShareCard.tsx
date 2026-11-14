@@ -6,7 +6,7 @@ import { useLeave } from "../hooks/useLeave";
 // A preview of the result as an image, and ways to get it out: the share sheet (phones, and
 // browsers that have one), saving it as a file, or copying it to paste into a chat.
 export function ShareCard({ data, onClose }: { data: CardData; onClose: () => void }) {
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -56,7 +56,7 @@ export function ShareCard({ data, onClose }: { data: CardData; onClose: () => vo
   };
 
   return createPortal(
-    <div className={`avg-detail share-card${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Share">
+    <div ref={sheet} className={`avg-detail share-card${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Share">
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>

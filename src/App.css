@@ -1336,3 +1336,6 @@ body.solving .splits-badge { display: none; }
 body.solving .undo-toast { visibility: hidden; }
 @keyframes toast-in { from { opacity: 0; translate: 0 8px; } }
 @media (prefers-reduced-motion: reduce) { .undo-toast { animation: none; } }
+
+/* A full-screen popup being pulled down to close (usePullToClose): it lifts off the page. */
+:is(.avg-detail, .case-detail)[data-pulling] { border-radius: 16px 16px 0 0; box-shadow: 0 -6px 28px rgb(0 0 0 / 0.28); }

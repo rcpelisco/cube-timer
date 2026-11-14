@@ -29,7 +29,7 @@ export function AverageDetail({ label, which, win, origin, puzzle, cube, isBest,
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [limit, setLimit] = useState(PAGE);
   const valueRef = useRef<HTMLDivElement>(null);
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   const fly = useFlyIn(origin, valueRef, leaving);
   const [sharing, setSharing] = useState<CardData | null>(null);
 
@@ -77,7 +77,7 @@ export function AverageDetail({ label, which, win, origin, puzzle, cube, isBest,
   };
 
   return createPortal(
-    <div className={`avg-detail${fly && !leaving ? " fly" : ""}${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={`${label} ${which === "best" ? "best" : "current"}`}>
+    <div ref={sheet} className={`avg-detail${fly && !leaving ? " fly" : ""}${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={`${label} ${which === "best" ? "best" : "current"}`}>
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>

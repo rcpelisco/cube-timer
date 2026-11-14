@@ -67,7 +67,7 @@ export function MockCompSetup({ puzzle, past, onStart, onHistory, onClose }: {
   puzzle: PuzzleId; past: PastRound[];
   onStart: (format: CompFormat, cutoff: number | null, limit: number | null) => void; onHistory: () => void; onClose: () => void;
 }) {
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   const here = past.filter(p => p.puzzle === puzzle);
   // Starts from the settings of your last round on this puzzle.
   const lastHere = here[0]?.round;
@@ -80,7 +80,7 @@ export function MockCompSetup({ puzzle, past, onStart, onHistory, onClose }: {
   useOverlayKeys(close);
 
   return createPortal(
-    <div className={`avg-detail comp-setup${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Mock competition">
+    <div ref={sheet} className={`avg-detail comp-setup${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Mock competition">
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>
@@ -228,7 +228,7 @@ export function MockCompResult({ round, status, sessionBest, puzzle, cube, onAga
 export function MockCompHistory({ sessions, puzzle: startPuzzle, onDelete, onClose }: {
   sessions: Session[]; puzzle: PuzzleId; onDelete: (sid: string, startAt: number) => void; onClose: () => void;
 }) {
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   useOverlayKeys(close);
   const all = useMemo(() => pastRounds(sessions), [sessions]);
   const puzzles = PUZZLE_ORDER.filter(p => all.some(r => r.puzzle === p));
@@ -250,7 +250,7 @@ export function MockCompHistory({ sessions, puzzle: startPuzzle, onDelete, onClo
   const label = FORMATS[format].label;
 
   return createPortal(
-    <div className={`avg-detail comp-history${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Mock competition history">
+    <div ref={sheet} className={`avg-detail comp-history${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Mock competition history">
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>

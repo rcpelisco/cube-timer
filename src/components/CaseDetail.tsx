@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLeave } from "../hooks/useLeave";
 import { puzzleOf, setupFor, SET_LABEL, type AlgCase } from "../lib/algs";
@@ -24,11 +24,13 @@ export function CaseDetail({ c, cross, main, onChooseMain, custom, onAddCustom, 
   position: { index: number; total: number } | null; onPrev: (() => void) | null; onNext: (() => void) | null;
 }) {
   const [watching, setWatching] = useState<string | null>(null);
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   const watchingRef = useRef(false);
   useEffect(() => { watchingRef.current = watching !== null; }, [watching]);
   const [slide, setSlide] = useState<"next" | "prev" | null>(null);
   const root = useRef<HTMLDivElement>(null);
+  // The root is also the pull-down-to-close sheet.
+  const setRoot = useCallback((el: HTMLDivElement | null) => { root.current = el; return sheet(el); }, [sheet]);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
   const go = (dir: "next" | "prev") => {
@@ -63,7 +65,7 @@ export function CaseDetail({ c, cross, main, onChooseMain, custom, onAddCustom, 
   }, [close]);
 
   return createPortal(
-    <div className={`case-detail${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={c.name} ref={root}
+    <div className={`case-detail${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={c.name} ref={setRoot}
       onTouchStart={e => { const t = e.touches[0]; touch.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null; }}
       onTouchEnd={e => {
         const start = touch.current; touch.current = null;

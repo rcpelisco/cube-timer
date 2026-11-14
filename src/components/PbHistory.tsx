@@ -12,7 +12,7 @@ const dateText = (at: number) =>
 // Full-screen history of the session's personal bests: when each best single and average was
 // set and by how much, as a step chart and a list (newest first).
 export function PbHistory({ solves, onClose }: { solves: Solve[]; onClose: () => void }) {
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   const history = useMemo(() => pbHistory(solves), [solves]);
   const [kind, setKind] = useState<PbHistoryKind>("Single");
   const events = history[kind];
@@ -32,7 +32,7 @@ export function PbHistory({ solves, onClose }: { solves: Solve[]; onClose: () =>
   const which = (e: PbEvent) => (SIZE[kind] === 1 ? `Solve ${e.i + 1}` : `Solves ${e.i - SIZE[kind] + 2}–${e.i + 1}`);
 
   return createPortal(
-    <div className={`avg-detail pb-history${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Personal best history">
+    <div ref={sheet} className={`avg-detail pb-history${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Personal best history">
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>

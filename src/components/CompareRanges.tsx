@@ -87,7 +87,7 @@ const ROWS: RowDef[] = [
 ];
 
 export function CompareRanges({ solves: own, sessions, puzzle, onClose }: { solves: Solve[]; sessions: Session[]; puzzle: PuzzleId; onClose: () => void }) {
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   const scope = useSolveScope(own, sessions, puzzle);
   const { solves } = scope;
   const [preset, setPreset] = useState<Preset>("month");
@@ -125,7 +125,7 @@ export function CompareRanges({ solves: own, sessions, puzzle, onClose }: { solv
   };
 
   return createPortal(
-    <div className={`avg-detail compare${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Compare two date ranges">
+    <div ref={sheet} className={`avg-detail compare${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label="Compare two date ranges">
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>

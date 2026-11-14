@@ -23,7 +23,7 @@ export function SolveDetail({ solves, i, puzzle, cube, onPenalty, onDelete, onNo
   // Which solve the delete confirmation is for, so it doesn't carry over when stepping to another.
   const [confirmAt, setConfirmAt] = useState<number | null>(null);
   const confirmDelete = confirmAt === i;
-  const { leaving, close } = useLeave(onClose);
+  const { leaving, close, sheet } = useLeave(onClose);
   // The tapped time shows in the list again on closing, or on stepping to another solve.
   const [firstI] = useState(i);
   const valueRef = useRef<HTMLDivElement>(null);
@@ -77,7 +77,7 @@ export function SolveDetail({ solves, i, puzzle, cube, onPenalty, onDelete, onNo
   const when = new Date(s.at).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
   return createPortal(
-    <div className={`avg-detail solve-detail${fly && !leaving ? " fly" : ""}${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={`Solve ${i + 1}`}>
+    <div ref={sheet} className={`avg-detail solve-detail${fly && !leaving ? " fly" : ""}${leaving ? " leaving" : ""}`} role="dialog" aria-modal="true" aria-label={`Solve ${i + 1}`}>
       <div className="avg-detail-inner">
         <div className="avg-detail-head">
           <div>
