@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy · Cube Timer</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f6f7f9; --text: #1b222c; --muted: #5b6573; --rule: #d9dee5; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #131a23; --text: #e7ebf0; --muted: #9aa5b3; --rule: #2a3340; } }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { font-size: 26px; margin: 0 0 4px; }
+    h2 { font-size: 18px; margin: 28px 0 6px; padding-top: 16px; border-top: 1px solid var(--rule); }
+    p, li { margin: 0 0 10px; }
+    ul { padding-left: 20px; }
+    .muted { color: var(--muted); }
+    a { color: inherit; text-underline-offset: 2px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Privacy policy</h1>
+  <p class="muted">Cube Timer · last updated 14 November 2026</p>
+
+  <p>Cube Timer is a speedcubing timer made by one person as a hobby project. It has no ads, no
+    analytics and no tracking, and it doesn't sell or share your data with anyone.</p>
+
+  <h2>If you don't sign in</h2>
+  <p>Everything you do stays in this browser on this device: your solves, sessions, algorithm
+    progress, Trainer times, settings, and a timer background photo if you choose one. None of it
+    is sent anywhere. Clearing the site's data in your browser removes it.</p>
+
+  <h2>If you sign in with Google</h2>
+  <p>Signing in is optional and only used to sync between your devices.</p>
+  <ul>
+    <li><b>Your Google account:</b> Firebase Authentication (by Google) keeps your name, email
+      address, profile photo and Google account ID, so you can sign in.</li>
+    <li><b>Your cubing data:</b> your solves, sessions, algorithm progress and settings, and Trainer
+      times are stored in Google Cloud Firestore under your account. Security rules let only your
+      account read or change them.</li>
+    <li>Appearance and Trainer settings and your timer background photo are never uploaded.</li>
+  </ul>
+  <p>Google stores this data for the app and may keep it on servers outside your country. Google's
+    own handling of it is described in the
+    <a href="https://firebase.google.com/support/privacy">Firebase privacy information</a> and the
+    <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.</p>
+
+  <h2>Abuse protection</h2>
+  <p>When the app talks to Firebase, Firebase App Check uses Google reCAPTCHA to make sure the
+    requests come from this app and not from a script. reCAPTCHA collects information about your
+    device and browser for that check, under the
+    <a href="https://policies.google.com/privacy">Google Privacy Policy</a> and
+    <a href="https://policies.google.com/terms">Terms of Service</a>.</p>
+
+  <h2>Hosting</h2>
+  <p>The site is served by Firebase Hosting. Like any web server, it receives your IP address and
+    browser details when it sends you the page, and Google may keep these in short-lived logs.</p>
+
+  <h2>Keeping and deleting your data</h2>
+  <p>Your data is kept until you delete it. In Settings, under Account, <b>Delete account</b>
+    removes your cubing data and your sign-in record from Firebase. <b>Sign out and remove from
+    this device</b> also clears this browser. You can export your solves from Settings at any time,
+    as a csTimer file or a spreadsheet.</p>
+
+  <h2>Changes and contact</h2>
+  <p>If this policy changes, the date at the top changes with it. For questions or requests about
+    your data, open an issue at
+    <a href="https://github.com/rcpelisco/cube-timer/issues">github.com/rcpelisco/cube-timer/issues</a>.</p>
+
+  <p class="muted"><a href="/">Back to Cube Timer</a></p>
+</main>
+</body>
+</html>

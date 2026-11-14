@@ -74,7 +74,7 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
 - Signed in with Google, solves, sessions, algorithm progress and Trainer times sync between devices.
   Each account's data stays separate on a shared device.
 - Settings has a privacy note, Sign out and remove from this device, and Delete account (its cloud data
-  and sign-in record).
+  and sign-in record). The full privacy policy is `public/privacy.html`, served at `/privacy.html`.
 
 ## Credits
 
@@ -82,6 +82,14 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
   first), and the 4×4 parity cases (Pure, Basic and M OLL parity) and their algorithms.
 - [cubing.js](https://js.cubing.net/cubing/): scrambles, the cube models every algorithm is checked on,
   and the 3D cube.
+
+Cube Timer isn't affiliated with or endorsed by the World Cube Association, SpeedCubeDB, csTimer or any
+cube maker.
+
+## License
+
+[MIT](LICENSE). The build writes `dist/licenses.txt` with the license of every open-source package
+bundled into the app (a small Vite plugin in `vite.config.ts`); Settings links to it.
 
 ## Develop
 

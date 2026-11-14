@@ -208,9 +208,12 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
             </p>
           </>
         )}
+        <p className="setting-note">
+          <a href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a>
+        </p>
       </div>
       <div className="panel settings-group credits">
-        <h2>Credits</h2>
+        <h2>Credits and legal</h2>
         <p className="setting-note">
           The OLL and PLL algorithms, their order (most popular first) and the 4×4 parity cases and
           algorithms come from <a href="https://speedcubedb.com" target="_blank" rel="noopener noreferrer">SpeedCubeDB</a>.
@@ -218,6 +221,16 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
         </p>
         <p className="setting-note">
           Scrambles, the cube models and the 3D cube come from <a href="https://js.cubing.net/cubing/" target="_blank" rel="noopener noreferrer">cubing.js</a>.
+        </p>
+        <p className="setting-note">
+          Cube Timer is an independent hobby project, not affiliated with or endorsed by the World Cube
+          Association, SpeedCubeDB, csTimer or any cube maker. Their names are used only to say what the
+          app follows or works with.
+        </p>
+        <p className="setting-note">
+          Cube Timer is open source under the <a href="https://github.com/rcpelisco/cube-timer/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a> and
+          comes with no warranty. It's built with open-source packages (React, Firebase, cubing.js, the
+          Archivo and Chivo Mono fonts and others): <a href="/licenses.txt" target="_blank" rel="noopener">open-source licenses</a>.
         </p>
       </div>
       <CspReportList />

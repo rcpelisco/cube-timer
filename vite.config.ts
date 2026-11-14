@@ -1,7 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { Plugin } from "vite";
 
 // The headers Firebase Hosting sends on every page (firebase.json), so `vite preview` serves the
 // built app under the same security policy. CSP_ENFORCE=1 turns the report-only policy into a
@@ -18,6 +20,47 @@ function hostingHeaders(): Record<string, string> {
     } else out[key] = value;
   }
   return out;
+}
+
+// Writes licenses.txt next to the app: the license of every package bundled into it (found from
+// the modules in the build), plus the cubing.js worker and the service worker's Workbox, which
+// are built separately. Their licenses ask for their notices to go along with the code.
+function licenses(): Plugin {
+  const fromIds = (ids: Iterable<string>) => {
+    const names = new Set<string>();
+    for (const id of ids) {
+      const m = [...id.matchAll(/node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)/g)].pop();
+      if (m) names.add(m[1].replace(/\\/g, "/"));
+    }
+    return names;
+  };
+  return {
+    name: "licenses",
+    apply: "build",
+    generateBundle() {
+      const names = fromIds(this.getModuleIds());
+      for (const extra of ["cubing", "workbox-core", "workbox-precaching", "workbox-routing", "workbox-window"]) names.add(extra);
+      const parts = [...names].sort().map(name => {
+        const dir = join("node_modules", name);
+        if (!existsSync(join(dir, "package.json"))) return "";
+        const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+        const file = readdirSync(dir).find(f => /^licen[cs]e/i.test(f));
+        // Some packages (Firebase, cubing.js) ship without a license file: name the license, where
+        // its full text is, and where the package's source is.
+        const repo = typeof pkg.repository === "string" ? pkg.repository : pkg.repository?.url;
+        const ids = String(pkg.license ?? "").match(/[A-Za-z0-9.+-]+(?=\s|\)|$)/g)?.filter(x => !/^(OR|AND|WITH)$/.test(x)) ?? [];
+        const text = file ? readFileSync(join(dir, file), "utf8").trim()
+          : [`License: ${pkg.license ?? "see the package"}`, ...ids.map(x => `Full text: https://spdx.org/licenses/${x}.html`),
+            ...(repo ? [`Source: ${repo.replace(/^git\+/, "").replace(/\.git$/, "")}`] : [])].join("\n");
+        return `${"=".repeat(72)}\n${name} ${pkg.version} (${pkg.license ?? "?"})\n${"=".repeat(72)}\n\n${text}\n`;
+      }).filter(Boolean);
+      this.emitFile({
+        type: "asset",
+        fileName: "licenses.txt",
+        source: `Cube Timer includes the following open-source packages.\n\n${parts.join("\n")}`,
+      });
+    },
+  };
 }
 
 // https://vite.dev/config/
@@ -54,6 +97,7 @@ export default defineConfig({
   optimizeDeps: { exclude: ["cubing"] },
   plugins: [
     react(),
+    licenses(),
     VitePWA({
       registerType: "autoUpdate",
       // index.html has its own light/dark theme-color tags (switched by lib/theme.ts).
@@ -73,7 +117,8 @@ export default defineConfig({
         // Only the latin font files go in the offline copy; the other subsets load if a character ever needs them.
         globIgnores: ["**/*-{latin-ext,vietnamese,cyrillic,cyrillic-ext,greek,greek-ext}-wght-normal-*.woff2"],
         // Firebase Hosting serves the Google sign-in handler under /__/; let those requests reach the network.
-        navigateFallbackDenylist: [/^\/__\//],
+        // The privacy policy and licenses are their own pages, not the app.
+        navigateFallbackDenylist: [/^\/__\//, /^\/privacy\.html$/, /^\/licenses\.txt$/],
       },
     }),
   ],
