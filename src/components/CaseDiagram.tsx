@@ -39,21 +39,15 @@ function tilePath(x: number, y: number, w: number, h: number, [tl, tr, br, bl]: 
 }
 // A face tile of an n×n top view shaped like a stickerless cube's, as in the 3D views: nearly
 // sharp at the face's outer edge, rounded at corners toward the middle of the face (a little on
-// corner pieces, a lot on a 3×3's edge pieces); a 3×3's center is a slightly smaller rounded square.
+// corner pieces, a lot on a 3×3's edge pieces); a 3×3's center is a rounded square. Every tile is
+// the same size; only the rounding differs.
 const FaceTile = ({ x, y, size, col, row, n, fill }: { x: number; y: number; size: number; col: number; row: number; n: 2 | 3; fill: string }) => {
-  let d: string;
-  if (n === 3 && col === 1 && row === 1) {
-    const i = size * 0.05;
-    d = tilePath(x + i, y + i, size - 2 * i, size - 2 * i, Array(4).fill(size * 0.22));
-  } else {
-    const edge = n === 3 && (col === 1) !== (row === 1);
-    const radii = [[col, row], [col + 1, row], [col + 1, row + 1], [col, row + 1]].map(([gx, gy]) => {
-      const inward = gx > 0 && gx < n && gy > 0 && gy < n;
-      return size * (!inward ? 0.035 : edge ? 0.3 : n === 2 ? 0.2 : 0.12);
-    });
-    d = tilePath(x, y, size, size, radii);
-  }
-  return <path d={d} fill={fill} stroke="var(--sticker-edge)" strokeWidth={0.8} />;
+  const center = n === 3 && col === 1 && row === 1, edge = n === 3 && (col === 1) !== (row === 1);
+  const radii = [[col, row], [col + 1, row], [col + 1, row + 1], [col, row + 1]].map(([gx, gy]) => {
+    const inward = gx > 0 && gx < n && gy > 0 && gy < n;
+    return size * (center ? 0.22 : !inward ? 0.035 : edge ? 0.3 : n === 2 ? 0.2 : 0.12);
+  });
+  return <path d={tilePath(x, y, size, size, radii)} fill={fill} stroke="var(--sticker-edge)" strokeWidth={0.8} />;
 };
 
 function Diagram3x3({ c, alg, cross, className = "" }: { c: AlgCase; alg: string; cross: CrossColor; className?: string }) {
@@ -215,12 +209,12 @@ function iso(n: number, u: number) {
   // face, counted along a and b from o's face corner. A tile corner on the face's outer edge is
   // nearly sharp; one pointing in toward the center is rounded (on a 3×3 a little on corner
   // pieces and a lot on edge pieces; on a 2×2, where every piece is a corner, a bit more); a 3×3's
-  // center is a rounded square, slightly smaller than its cell.
+  // center is a rounded square. Every tile is the same size; only the rounding differs.
   const K = 0.5523; // control-point distance for a quarter circle as a cubic curve
   const tile = (o: V3, a: V3, b: V3, i: number, j: number) => {
     const at = (s: number, t: number) => pt([0, 1, 2].map(k => o[k] + (i + s) * a[k] + (j + t) * b[k]) as V3);
     const center = n === 3 && i === 1 && j === 1, edge = n === 3 && (i === 1) !== (j === 1);
-    const lo = center ? 0.05 : 0.035, hi = 1 - lo;
+    const lo = 0.035, hi = 1 - lo;
     const corners: [number, number][] = [[lo, lo], [hi, lo], [hi, hi], [lo, hi]];
     let d = "";
     corners.forEach(([s, t], k) => {
