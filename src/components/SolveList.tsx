@@ -3,6 +3,7 @@ import { avgOf, DNF, eff, fmt, rolling, type Penalty, type Solve } from "../lib/
 import { PUZZLES, type PuzzleId } from "../lib/puzzles";
 import { solveKey } from "../lib/sessions";
 import { SolveDetail } from "./SolveDetail";
+import { modalOpen } from "../lib/modal";
 
 interface Props {
   solves: Solve[];
@@ -58,7 +59,7 @@ export const SolveList = memo(function SolveList({ solves, puzzle, cube, onPenal
   // Esc leaves selecting.
   useEffect(() => {
     if (!selecting) return;
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape" && !document.querySelector('[aria-modal="true"]')) { e.preventDefault(); stopSelecting(); } };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape" && !modalOpen()) { e.preventDefault(); stopSelecting(); } };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [selecting, stopSelecting]);

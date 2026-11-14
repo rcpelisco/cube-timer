@@ -1,8 +1,9 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Activity, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { bestRolling, DNF, eff, fmt, MAX_NOTE, newBests, type Penalty, type Solve } from "./lib/stats";
 import { FORMATS, limitPenalty, moveOldRounds, pastRounds, roundStatus, toRecord, useMockComp } from "./lib/mockComp";
 import { fireConfetti } from "./lib/confetti";
 import { load, save, saveFailure, wipeDevice } from "./lib/storage";
+import { modalOpen } from "./lib/modal";
 import { firebaseEnabled, loadFirebase, type FirebaseClient } from "./lib/firebase";
 import { PUZZLES, toPuzzle } from "./lib/puzzles";
 import { importCsTimer } from "./lib/csTimer";
@@ -48,20 +49,48 @@ import { solveKey, type Session } from "./lib/sessions";
 import { UndoToast } from "./components/UndoToast";
 import "./App.css";
 
-// Pages other than the timer load on demand, so a cold start only downloads the timer. They're
-// fetched in the background once the app is idle, so switching to one is still instant.
-const loadAlgs = () => import("./components/AlgorithmsPage");
-const loadTrainer = () => import("./components/TrainerPage");
-const loadSettings = () => import("./components/SettingsPage");
-const AlgorithmsPage = lazy(() => loadAlgs().then(m => ({ default: m.AlgorithmsPage })));
-const TrainerPage = lazy(() => loadTrainer().then(m => ({ default: m.TrainerPage })));
-const SettingsPage = lazy(() => loadSettings().then(m => ({ default: m.SettingsPage })));
-if (typeof window !== "undefined") {
-  const prefetch = () => { loadAlgs(); loadTrainer(); loadSettings(); };
-  window.addEventListener("load", () => {
-    if (typeof requestIdleCallback === "function") requestIdleCallback(prefetch, { timeout: 4000 });
-    else setTimeout(prefetch, 2000);
-  }, { once: true });
+// Pages other than the timer load on demand, so a cold start only downloads the timer.
+const AlgorithmsPage = lazy(() => import("./components/AlgorithmsPage").then(m => ({ default: m.AlgorithmsPage })));
+const TrainerPage = lazy(() => import("./components/TrainerPage").then(m => ({ default: m.TrainerPage })));
+const SettingsPage = lazy(() => import("./components/SettingsPage").then(m => ({ default: m.SettingsPage })));
+
+// Once the app is idle after starting, the other pages are built in the background (hidden, at
+// the lowest priority, which a tap always interrupts), so even the first visit to one shows it at
+// once instead of after a beat while its code is fetched, run for the first time and laid out.
+// Pages then stay built when you leave them (React's <Activity>): hidden, with their effects
+// stopped, and shown again as you left them.
+function useWarm(): boolean {
+  const [warm, setWarm] = useState(false);
+  useEffect(() => {
+    const go = () => setWarm(true);
+    let idle = 0, timer = 0;
+    const start = () => {
+      if (typeof requestIdleCallback === "function") idle = requestIdleCallback(go, { timeout: 4000 });
+      else timer = window.setTimeout(go, 2000);
+    };
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    return () => {
+      window.removeEventListener("load", start);
+      if (idle) cancelIdleCallback(idle);
+      clearTimeout(timer);
+    };
+  }, []);
+  return warm;
+}
+
+// A page kept built: shown when `on`, otherwise hidden; built the first time it's shown or the
+// app is warm. A hidden page is frozen: it keeps the content it last had, so it does no work in
+// the background as solves come in (React skips a subtree it's handed again unchanged), and
+// catches up in one go when it's shown.
+function Page({ on, warm, children }: { on: boolean; warm: boolean; children: ReactNode }) {
+  const [built, setBuilt] = useState(on);
+  const [frozen, setFrozen] = useState(children);
+  // Until it's built it follows along, so it's built with what the app has then.
+  if ((on || !built) && frozen !== children) setFrozen(children);
+  if ((on || warm) && !built) setBuilt(true);
+  if (!built && !warm && !on) return null;
+  return <Activity mode={on ? "visible" : "hidden"}><Suspense fallback={null}>{on ? children : frozen}</Suspense></Activity>;
 }
 
 // Removes this person's data from the device, including Firestore's offline copy, and reloads.
@@ -168,6 +197,7 @@ export default function App() {
   }, [setSolves, nextScramble, recordAttempt]);
 
   const [view, setView] = useView();
+  const warm = useWarm();
   usePageTransition(view, isPhone);
   // Computers show solves and stats beside the timer, so "solves" is the timer page there.
   const showTimer = view === "timer" || (!isPhone && view === "solves");
@@ -293,7 +323,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || phaseRef.current !== "idle") return;
       if ((e.target as Element | null)?.matches?.("input, textarea, select, [contenteditable]")) return;
-      if (document.querySelector('[aria-modal="true"]')) return;
+      if (modalOpen()) return;
       const i = solvesRef.current.length - 1;
       if (i < 0) return;
       const key = e.key.toLowerCase();
@@ -397,14 +427,12 @@ export default function App() {
         onView={setView}
       />
 
-      <Suspense fallback={null}>
-        {view === "algs" && <AlgorithmsPage prefs={algPrefs} />}
-        {view === "train" && <TrainerPage prefs={algPrefs} trainer={trainer} />}
-        {view === "settings" && (
-          <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
-            solveActions={{ solves, onClear: clearSolves }} />
-        )}
-      </Suspense>
+      <Page on={view === "algs"} warm={warm}><AlgorithmsPage prefs={algPrefs} /></Page>
+      <Page on={view === "train"} warm={warm}><TrainerPage prefs={algPrefs} trainer={trainer} /></Page>
+      <Page on={view === "settings"} warm={warm}>
+        <SettingsPage inspection={inspection} onInspection={setInspection} account={account} sessions={sessionProps} onImport={importFile}
+          solveActions={{ solves, onClear: clearSolves }} />
+      </Page>
 
       {/* The timer page stays mounted (hidden) on other pages so its state and scramble keep. */}
       <section className="main" hidden={!showTimer}>
@@ -513,7 +541,7 @@ export default function App() {
       </section>
 
       {isPhone ? (
-        view === "solves" && (
+        <Page on={view === "solves"} warm={warm}>
           <section className="solves-page">
             {solves.length ? <>
               <div className="solves-actions"><SolveActions solves={solves} onClear={clearSolves} /></div>
@@ -523,7 +551,7 @@ export default function App() {
               {solveList}
             </> : <EmptySolves puzzle={puzzle} session={current.name} touch={isTouch} onTimer={() => setView("timer")} />}
           </section>
-        )
+        </Page>
       ) : (
         <aside className="side dimmable" hidden={!showTimer}>
           {solves.length ? <>{statsPanel}{solveList}</> : <EmptySolves puzzle={puzzle} session={current.name} touch={isTouch} />}
