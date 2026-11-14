@@ -5,7 +5,7 @@ import { rotationFor, type CrossColor } from "./crossColor";
 import type { LearnStatus } from "./algStatus";
 import { isCrossLevel, isDrill, type CrossLevel, type Drill } from "./drills";
 
-// Case trainer (F2L, OLL, PLL, COLL, and the 2×2's): a scramble that leaves a chosen case, timed per case.
+// Case trainer (F2L, OLL, PLL, COLL, the 2×2's, and 4×4 parity): a scramble that leaves a chosen case, timed per case.
 //
 // The scramble is a real random-looking one (cubing.js solves the target state, and the scramble
 // is that solution backwards), so it doesn't give the case away the way undoing the algorithm
@@ -78,8 +78,47 @@ async function scramble2x2(alg: string, set: AlgSet, cross: CrossColor): Promise
   return solution.invert().toString().replace(/2'/g, "2");
 }
 
+// Whole-cube turns written out of an algorithm: each later move is renamed to the face it turns
+// once the cube is held as before. A 4×4 has no fixed centers, so how it's held at the end doesn't
+// matter. x turns like R (the front comes up), y like U (the right comes to the front), z like F.
+const TURN: Record<string, Record<string, string>> = {
+  x: { U: "F", F: "D", D: "B", B: "U" },
+  y: { F: "R", R: "B", B: "L", L: "F" },
+  z: { U: "L", L: "D", D: "R", R: "U" },
+};
+export function withoutRotations(alg: string): string {
+  let face: Record<string, string> = { U: "U", D: "D", F: "F", B: "B", R: "R", L: "L" };
+  const out: string[] = [];
+  for (const m of alg.split(/\s+/).filter(Boolean)) {
+    const rot = /^([xyz])(2?)('?)$/.exec(m);
+    if (rot) {
+      const times = rot[2] ? 2 : rot[3] ? 3 : 1;
+      for (let i = 0; i < times; i++) {
+        const t = TURN[rot[1]], next = { ...face };
+        for (const [to, from] of Object.entries(t)) next[to] = face[from];
+        face = next;
+      }
+      continue;
+    }
+    out.push(m.replace(/[UDFBRL]/i, f => (f === f.toUpperCase() ? face[f] : face[f.toUpperCase()].toLowerCase())));
+  }
+  return out.join(" ");
+}
+
+// 4×4: cubing.js has no 4×4 solver, so the scramble is the case's setup itself, with whole-cube
+// turns written out: a random 3×3 PLL for OLL parity (the top's pattern is the case; where its
+// pieces are is random, as in a solve), then the case from a random angle, with a random last turn.
+const OUTER = /^([UDFBRL][2']?|[xyz][2']?)$/;
+function scramble4x4(alg: string, cross: CrossColor): string {
+  const c = ALGS.PAR4.find(x => x.algs.includes(alg));
+  const pll = PLL.flatMap(p => p.algs).filter(a => a.split(" ").every(m => OUTER.test(m)));
+  const before = c?.group === "During OLL" && Math.random() < 0.8 ? join(pick(AUF), setupFor(pick(pll))) : "";
+  return withoutRotations(join(rotationFor(cross), before, pick(AUF), setupFor(alg), pick(AUF))).replace(/2'/g, "2");
+}
+
 export async function caseScramble(alg: string, cross: CrossColor, set: AlgSet = "OLL"): Promise<string> {
   if (puzzleOf(set) === "2x2") return scramble2x2(alg, set, cross);
+  if (puzzleOf(set) === "4x4") return scramble4x4(alg, cross);
   const p = await target(alg, cross, set);
   const { experimentalSolve3x3x3IgnoringCenters } = await import("cubing/search");
   const solution = await experimentalSolve3x3x3IgnoringCenters(p);

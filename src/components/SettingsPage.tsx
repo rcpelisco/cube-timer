@@ -209,6 +209,17 @@ export function SettingsPage({ inspection, onInspection, account, sessions, solv
           </>
         )}
       </div>
+      <div className="panel settings-group credits">
+        <h2>Credits</h2>
+        <p className="setting-note">
+          The OLL and PLL algorithms, their order (most popular first) and the 4×4 parity cases and
+          algorithms come from <a href="https://speedcubedb.com" target="_blank" rel="noopener noreferrer">SpeedCubeDB</a>.
+          Every one is checked on a cube model before it's listed.
+        </p>
+        <p className="setting-note">
+          Scrambles, the cube models and the 3D cube come from <a href="https://js.cubing.net/cubing/" target="_blank" rel="noopener noreferrer">cubing.js</a>.
+        </p>
+      </div>
       <CspReportList />
     </section>
   );

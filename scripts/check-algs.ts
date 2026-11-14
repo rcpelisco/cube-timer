@@ -16,7 +16,7 @@ import { F2L } from "../src/lib/algsF2L.ts";
 import { COLL } from "../src/lib/algsCOLL.ts";
 import { collKey, collProblems, collShape, f2lGroup, f2lKey, f2lPlaceOf, f2lProblems } from "./alg-model-more.ts";
 import { PAR4 } from "../src/lib/algs4x4.ts";
-import { caseState4, fromSolved4, parityEffect, validOn4x4 } from "./alg-model-4x4.ts";
+import { caseState4, fromSolved4, ollParitySolves, parityEffect, topPattern, validOn4x4 } from "./alg-model-4x4.ts";
 import { allOriented, bottomSolved, validOn2x2, caseState2, corners, fromSolved2, ollKey, pblKey } from "./alg-model-2x2.ts";
 
 let failed = 0;
@@ -102,24 +102,30 @@ for (const [set, list, expected] of [["2×2 OLL", OLL2, 7], ["2×2 PBL", PBL, 5]
   console.log(`${ok ? "✓" : "✗"} ${set}: ${seen.size} distinct cases of ${list.length} listed (expected ${expected})`);
   if (!ok) failed++;
 }
-// 4×4 parity: each algorithm does exactly what its case's name says (up to a turn of the top),
-// touching nothing else.
-const EXPECT4: Record<string, string> = { "par4-oll": "UF:flip", "par4-pll": "UB:from UF UF:from UB" };
+// 4×4 parity. OLL parity cases are told apart by the top's pattern; each algorithm has to fix the
+// parity and orient the whole top from the case its first algorithm sets up. PLL parity: each
+// algorithm does exactly what the case's name says (up to a turn of the top), touching nothing else.
+const EXPECT4: Record<string, string> = { "par4-pll": "UB:from UF UF:from UB" };
 {
   const seen = new Set<string>();
   for (const c of PAR4) {
+    const oll = c.group === "During OLL";
     for (const alg of c.algs) {
       total++;
       if (!validOn4x4(alg)) { console.log(`✗ ${c.name}: not a 4×4 algorithm   [${alg}]`); failed++; continue; }
-      const r = parityEffect(alg);
-      if ("problem" in r) { console.log(`✗ ${c.name}: ${r.problem}   [${alg}]`); failed++; }
-      else if (r.effect !== EXPECT4[c.id]) { console.log(`✗ ${c.name}: does ${r.effect}, expected ${EXPECT4[c.id]}   [${alg}]`); failed++; }
+      if (oll) {
+        if (!(await ollParitySolves(c.algs[0], alg))) { console.log(`✗ ${c.name}: doesn't fix the parity and orient the top   [${alg}]`); failed++; }
+      } else {
+        const r = parityEffect(alg);
+        if ("problem" in r) { console.log(`✗ ${c.name}: ${r.problem}   [${alg}]`); failed++; }
+        else if (r.effect !== EXPECT4[c.id]) { console.log(`✗ ${c.name}: does ${r.effect}, expected ${EXPECT4[c.id]}   [${alg}]`); failed++; }
+      }
       if (!fromSolved4(setupFor(alg)).isIdentical(caseState4(alg))) { console.log(`✗ ${c.name}: setup doesn't produce the case for "${alg}"`); failed++; }
     }
-    seen.add(EXPECT4[c.id]);
+    seen.add(oll ? await topPattern(c.algs[0]) : EXPECT4[c.id]);
   }
-  const ok = PAR4.length === 2 && seen.size === 2;
-  console.log(`${ok ? "✓" : "✗"} 4×4 parity: ${seen.size} distinct cases of ${PAR4.length} listed (expected 2)`);
+  const ok = PAR4.length === 4 && seen.size === 4;
+  console.log(`${ok ? "✓" : "✗"} 4×4 parity: ${seen.size} distinct cases of ${PAR4.length} listed (expected 4)`);
   if (!ok) failed++;
 }
 console.log(`${failed ? "✗" : "✓"} ${total} algorithms checked${failed ? `, ${failed} problem(s)` : ""}`);

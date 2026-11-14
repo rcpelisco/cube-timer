@@ -39,6 +39,7 @@ describe("checkAlg", () => {
   it("accepts a 4×4 parity algorithm that leaves a 3×3 last layer, and rejects one that doesn't fix it", async () => {
     const lucas = "Rw U2 x Rw U2 Rw U2 Rw' U2 Lw U2 Rw' U2 Rw U2 Rw' U2 Rw'";
     expect((await ok("PAR4", "par4-oll", lucas)).ok).toBe(true);
+    expect((await ok("PAR4", "par4-oll-m", "2R' U2 2L F2 2L' F2 2R2 U2 2R U2 2R' U2 F2 2R2 F2")).ok).toBe(true);
     expect((await ok("PAR4", "par4-oll", "Rw2 B2 U2 Lw U2 Rw' U2 Rw U2 F2 Rw F2 Lw' B2 Rw2")).ok).toBe(true);
     expect((await ok("PAR4", "par4-pll", "2R2 U2 2R2 Uw2 2R2 Uw2 U2")).ok).toBe(true);
     // The wrong parity, or none, leaves it there.

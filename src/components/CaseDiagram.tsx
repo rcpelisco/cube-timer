@@ -16,7 +16,8 @@ import { cubeView, llStickers, stickers2x2, stickers4x4, type CubeView, type Fac
 // - 2×2 PBL: both layers, top and bottom, each as a face with its side strips. The bottom is drawn
 //   as seen from above (through the cube), so its front is at the bottom like the top's.
 // - 4×4 parity: the top face as a 4×4 grid with side strips. OLL parity shows only the top color;
-//   PLL parity shows the side colors too.
+//   PLL parity shows the side colors too. Drawn from the case's first algorithm, whichever is your
+//   main one: other algorithms may also move top pieces, which would show a different picture.
 
 export function CaseDiagram(props: { c: AlgCase; alg: string; cross: CrossColor; className?: string }) {
   if (puzzleOf(props.c.set) === "2x2") return <Diagram2x2 {...props} />;
@@ -71,7 +72,8 @@ function Diagram3x3({ c, alg, cross, className = "" }: { c: AlgCase; alg: string
   );
 }
 
-function Diagram4x4({ c, alg, cross, className = "" }: { c: AlgCase; alg: string; cross: CrossColor; className?: string }) {
+function Diagram4x4({ c, cross, className = "" }: { c: AlgCase; cross: CrossColor; className?: string }) {
+  const alg = c.algs[0];
   const [st, setSt] = useState<Stickers4 | null>(null);
   const [ref, seen] = useSeen<SVGSVGElement>();
   useEffect(() => {
@@ -85,7 +87,7 @@ function Diagram4x4({ c, alg, cross, className = "" }: { c: AlgCase; alg: string
   const pos = (i: number) => O + i * (CELL + GAP);
   const FAR = O + 4 * CELL + 3 * GAP + G;
   const faces = facesFor(cross);
-  const topOnly = c.id === "par4-oll";
+  const topOnly = c.group === "During OLL";
   const fill = (f: Face | undefined) => (!f ? "var(--sticker-off)" : topOnly && f !== "U" ? "var(--sticker-off)" : faces[f]);
   const rects: { x: number; y: number; w: number; h: number; f?: Face }[] = [];
   for (let r = 0; r < 4; r++) for (let col = 0; col < 4; col++) {
@@ -187,7 +189,29 @@ function iso(n: number, u: number) {
     return [at(lo, lo), at(hi, lo), at(hi, hi), at(lo, hi)].map(pt).join(" ");
   };
   const outline = ([[0, 0, 0], [n, 0, 0], [n, n, 0], [n, n, n], [0, n, n], [0, 0, n]] as V3[]).map(pt).join(" ");
-  return { quad, outline };
+  // A 3×3 tile shaped like a stickerless cube's (GAN style), as an SVG path: the cell (i, j) of a
+  // face, counted along a and b from o's face corner. A tile corner on the face's outer edge is
+  // nearly sharp; one pointing in toward the center is rounded (a little on corner pieces, a lot
+  // on edge pieces); the center is a rounded square, slightly smaller than its cell.
+  const K = 0.5523; // control-point distance for a quarter circle as a cubic curve
+  const tile = (o: V3, a: V3, b: V3, i: number, j: number) => {
+    const at = (s: number, t: number) => pt([0, 1, 2].map(k => o[k] + (i + s) * a[k] + (j + t) * b[k]) as V3);
+    const center = i === 1 && j === 1, edge = (i === 1) !== (j === 1);
+    const lo = center ? 0.05 : 0.035, hi = 1 - lo;
+    const corners: [number, number][] = [[lo, lo], [hi, lo], [hi, hi], [lo, hi]];
+    let d = "";
+    corners.forEach(([s, t], k) => {
+      const gi = i + Math.round(s), gj = j + Math.round(t);
+      const inward = gi > 0 && gi < n && gj > 0 && gj < n;
+      const r = center ? 0.22 : !inward ? 0.035 : edge ? 0.3 : 0.12;
+      const [ps, pt0] = corners[(k + 3) % 4], [ns, nt] = corners[(k + 1) % 4];
+      const d1 = [Math.sign(ps - s), Math.sign(pt0 - t)], d2 = [Math.sign(ns - s), Math.sign(nt - t)];
+      const off = (dir: number[], f: number) => at(s + dir[0] * f, t + dir[1] * f);
+      d += `${k ? "L" : "M"}${off(d1, r)}C${off(d1, r * (1 - K))} ${off(d2, r * (1 - K))} ${off(d2, r)}`;
+    });
+    return `${d}Z`;
+  };
+  return { quad, outline, tile };
 }
 const { quad, outline: CUBE_OUTLINE } = iso(2, 23);
 const ISO3 = iso(3, 15.5);
@@ -203,16 +227,16 @@ function DiagramF2L({ c, alg, cross, className = "" }: { c: AlgCase; alg: string
   }, [alg, seen]);
   const faces = { ...facesFor(cross), D: CROSS_COLORS.find(x => x.id === cross)!.swatch };
   const fill = (cell: { f: Face3; ll: boolean } | undefined) => (!cell || cell.ll ? "var(--sticker-off)" : faces[cell.f]);
-  const quads: { pts: string; fill: string }[] = [];
+  const tiles: { d: string; fill: string }[] = [];
   for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) {
-    quads.push({ pts: ISO3.quad([col, 2 - r, 3], EX, EY), fill: fill(st?.U[r][col]) });
-    quads.push({ pts: ISO3.quad([col, 0, 2 - r], EX, EZ), fill: fill(st?.F[r][col]) });
-    quads.push({ pts: ISO3.quad([3, col, 2 - r], EY, EZ), fill: fill(st?.R[r][col]) });
+    tiles.push({ d: ISO3.tile([0, 0, 3], EX, EY, col, 2 - r), fill: fill(st?.U[r][col]) });
+    tiles.push({ d: ISO3.tile([0, 0, 0], EX, EZ, col, 2 - r), fill: fill(st?.F[r][col]) });
+    tiles.push({ d: ISO3.tile([3, 0, 0], EY, EZ, col, 2 - r), fill: fill(st?.R[r][col]) });
   }
   return (
     <svg ref={ref} className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
-      <polygon points={ISO3.outline} fill="var(--cube-body)" />
-      {quads.map((q, i) => <polygon key={i} points={q.pts} fill={q.fill} stroke="var(--sticker-edge)" strokeWidth={0.6} strokeLinejoin="round" />)}
+      <polygon points={ISO3.outline} fill="var(--cube-body)" stroke="var(--cube-body)" strokeWidth={1} strokeLinejoin="round" />
+      {tiles.map((q, i) => <path key={i} d={q.d} fill={q.fill} />)}
     </svg>
   );
 }

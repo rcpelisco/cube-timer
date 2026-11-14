@@ -49,7 +49,7 @@ const INTRO: Record<AlgSet, string> = {
   OLL: "Orient the last layer: make the top all one color. Gray stickers don't matter for the case.",
   PLL: "Permute the last layer: move the oriented pieces into place.",
   OLL2: "Ortega step 2: with one face solved on the bottom, make the top all one color. Gray stickers don't matter for the case.",
-  PAR4: "4×4 parity: after reduction (centers, then edge pairs) the last layer can end up in a state no 3×3 has. OLL parity: one edge pair is flipped. PLL parity: two edge pairs are swapped, with the corners done. 2R is only the inner slice next to R; Rw is both right layers together.",
+  PAR4: "4×4 parity: after reduction (centers, then edge pairs) the last layer can end up in a state no 3×3 has. OLL parity: an odd number of edge pairs show the top color; the three cases are told apart by the top's pattern (Pure: one edge pair flipped; Basic and M: also two corners), and any algorithm that fixes the parity counts. PLL parity: two edge pairs are swapped, with the corners done. 2R is only the inner slice next to R; Rw is both right layers together; 2-3L is both inner slices (M on a 3×3).",
   PBL: "Ortega step 3: both faces are done; swap corners in both layers at once. If the swap is only on the bottom, or diagonal on top and adjacent below, turn the cube over (x2) first.",
 };
 
@@ -336,6 +336,11 @@ export function AlgorithmsPage({
           </div>
         </div>
       ))}
+
+      <p className="algs-credit">
+        OLL, PLL and 4×4 parity algorithms from{" "}
+        <a href="https://speedcubedb.com" target="_blank" rel="noopener noreferrer">SpeedCubeDB</a>.
+      </p>
 
       {open && (
         <CaseDetail

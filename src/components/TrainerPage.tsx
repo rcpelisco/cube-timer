@@ -72,7 +72,7 @@ export function TrainerPage({ prefs: { prefs }, trainer: { store, setStore } }: 
       <div className="trainer-controls dimmable">
         <div className="trainer-sets">
           <div className="view-tabs" role="radiogroup" aria-label="Puzzle">
-            {(["3x3", "2x2"] as AlgPuzzle[]).map(p => (
+            {(["3x3", "2x2", "4x4"] as AlgPuzzle[]).map(p => (
               <button key={p} type="button" role="radio" aria-checked={puzzle === p} className={puzzle === p ? "on" : ""}
                 onClick={() => { if (p !== puzzle) setSet(SETS[p][0]); }}>{p.replace("x", "×")}</button>
             ))}
@@ -126,7 +126,7 @@ export function TrainerPage({ prefs: { prefs }, trainer: { store, setStore } }: 
       ) : pool.length === 0 ? (
         <p className="trainer-empty panel">
           {byStatus.length === 0
-            ? <>No {puzzle === "2x2" ? "2×2 " : ""}{SET_LABEL[store.set]} cases to practise. Turn on a status above, or mark cases as Learning on the Algorithms page.</>
+            ? <>No {puzzle === "3x3" ? "" : `${puzzle.replace("x", "×")} `}{SET_LABEL[store.set]} cases to practise. Turn on a status above, or mark cases as Learning on the Algorithms page.</>
             : <>No cases picked. Open <b>Cases</b> above and choose some.</>}
         </p>
       ) : (
@@ -156,7 +156,9 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
     const id = ++request.current;
     if (!c) { setAttempt(null); return; }
     setAttempt({ c, scramble: null });
-    caseScramble(mainAlg(c, { choices, custom }), cross, c.set).then(
+    // 4×4 parity: set up from the case's first algorithm, as its picture is (your own algorithm
+    // may also move top pieces, and only has to fix the parity).
+    caseScramble(c.set === "PAR4" ? c.algs[0] : mainAlg(c, { choices, custom }), cross, c.set).then(
       scramble => { if (id === request.current) setAttempt({ c, scramble }); },
       () => { if (id === request.current) setAttempt({ c, scramble: null, failed: true }); },
     );
@@ -299,7 +301,7 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
           <div className="scramble dimmable">
             <div className="scramble-text">
               <span className="label">
-                {puzzleOf(set) === "2x2" ? "2×2 " : ""}{SET_LABEL[set]} trainer · {pool.length} {pool.length === 1 ? "case" : "cases"} · scramble white top, green front,
+                {puzzleOf(set) === "3x3" ? "" : `${puzzleOf(set).replace("x", "×")} `}{SET_LABEL[set]} trainer · {pool.length} {pool.length === 1 ? "case" : "cases"} · scramble white top, green front,
                 then hold {crossInfo.top} on top{front && front !== "green" ? `, ${front} in front` : ""}
               </span>
               {attempt?.scramble

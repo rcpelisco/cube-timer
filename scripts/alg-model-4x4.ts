@@ -4,6 +4,8 @@
 // edges may move. The result lists each top edge's wings that aren't home, e.g. "UF:flip".
 import { Alg } from "cubing/alg";
 import { puzzles } from "cubing/puzzles";
+import { parityFixed } from "../src/lib/parity4x4.ts";
+import { stickers4x4 } from "../src/lib/llDiagram.ts";
 
 const kp = await puzzles["4x4x4"].kpuzzle();
 const solved = kp.defaultPattern();
@@ -35,3 +37,30 @@ export function parityEffect(alg: string): { effect: string } | { problem: strin
 // The case as shown in the app: the algorithm undone on a solved cube.
 export const caseState4 = (alg: string) => solved.applyAlg(new Alg(alg).invert());
 export const fromSolved4 = (moves: string) => solved.applyAlg(new Alg(moves));
+
+// OLL parity: whether the algorithm solves the case set up by `caseAlg` as far as OLL goes, from
+// some turn of the top: the parity gone (algCheck's rule: the rest solved, a last layer a 3×3 can
+// have) and the whole top one color. The top pieces may end up anywhere, as PLL comes next.
+const ROTATIONS = ["", "y", "y2", "y'"].flatMap(a => ["", "x", "x2", "x'", "z", "z'"].map(b => `${a} ${b}`.trim()));
+const held = (p: ReturnType<typeof caseState4>) => {
+  const r = ROTATIONS.find(r => p.applyAlg(r).patternData.CENTERS.pieces.every((v, i) => centerOf[v] === centerOf[i]));
+  return r === undefined ? null : p.applyAlg(r);
+};
+export async function ollParitySolves(caseAlg: string, alg: string): Promise<boolean> {
+  for (const pre of ["", "U", "U2", "U'"]) {
+    const after = held(caseState4(caseAlg).applyAlg(`${pre} ${alg}`));
+    if (!after || !parityFixed(kp, after.patternData)) continue;
+    // The sticker picture of that state: the moves that undo to it.
+    const s = await stickers4x4(new Alg(`${new Alg(caseAlg).invert()} ${pre} ${alg}`).invert().toString());
+    if (s.top.every(r => r.every(f => f === "U"))) return true;
+  }
+  return false;
+}
+// The top's pattern for a case (which of the 16 top stickers show the top color), the same
+// whichever turn of the top it's seen from.
+export async function topPattern(alg: string): Promise<string> {
+  const t = (await stickers4x4(alg)).top.map(r => r.map(f => (f === "U" ? "#" : ".")));
+  const turns = [t];
+  for (let i = 0; i < 3; i++) { const g = turns[i]; turns.push(g.map((_, r) => g.map(row => row[r]).reverse())); }
+  return turns.map(g => g.map(r => r.join("")).join("/")).sort()[0];
+}

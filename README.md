@@ -52,13 +52,14 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
 ### Algorithms and Trainer
 
 - Algorithms page: 3×3 F2L (all 41 cases), OLL (57), PLL (21) and COLL (40), 2×2 Ortega (OLL and
-  PBL), and 4×4 parity (OLL and PLL parity), with diagrams, up to 4
+  PBL), and 4×4 parity (three OLL parity cases and PLL parity), with diagrams, up to 4
   algorithms each (standard first, pick your own main), your own algorithms (checked on a cube model to
   solve the case before they're added, and synced), setups, named triggers (Sune, Sexy, Sledgehammer, F sexy, inserts like R U R' and F' U' F…, chosen to cover as much of each algorithm as possible),
   a 3D cube that plays them, group/status filters, Learning/Learned status, and a cross-color setting
   that recolors the diagrams. Every algorithm is checked on a cube model (`npm run check:algs`).
 - Trainer: scrambles into a random F2L, OLL, PLL or COLL case from the ones you pick (shown only after the solve,
   so recognising it is part of the practice), times per case, favouring slow and little-practised cases.
+  2×2 and 4×4 parity cases too (4×4 scrambles are the case's setup moves, as cubing.js has no 4×4 solver).
   Also last-layer and cross drills, and "Drill my worst" for your slowest cases with a before and after.
 
 ### Appearance
@@ -74,6 +75,13 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
   Each account's data stays separate on a shared device.
 - Settings has a privacy note, Sign out and remove from this device, and Delete account (its cloud data
   and sign-in record).
+
+## Credits
+
+- [SpeedCubeDB](https://speedcubedb.com): the OLL and PLL algorithm lists and their order (most popular
+  first), and the 4×4 parity cases (Pure, Basic and M OLL parity) and their algorithms.
+- [cubing.js](https://js.cubing.net/cubing/): scrambles, the cube models every algorithm is checked on,
+  and the 3D cube.
 
 ## Develop
 
@@ -160,8 +168,9 @@ node scripts/find-algs.ts coll
 
 `build-algs` keeps an algorithm only if it solves the same case as the one already listed for it;
 `check:algs` fails if any algorithm breaks the first two layers, solves the wrong case, or a set is
-missing or repeats a case. 4×4 parity algorithms must change only the named top edges (corners and
-centers solved, after a turn of the top).
+missing or repeats a case. 4×4 OLL parity algorithms must fix the parity and turn the whole top to
+one color, from their case (told apart by the top's pattern); PLL parity algorithms must change only
+the named top edges (corners and centers solved, after a turn of the top).
 
 ## Install on iPhone
 
