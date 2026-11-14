@@ -389,8 +389,8 @@ body::before {
 /* iOS home-screen app: a small gap below the status bar, so the page doesn't start right under the
    clock (and the full-screen preview's header with it). */
 @media (display-mode: standalone) {
-  body { padding-top: calc(env(safe-area-inset-top, 0px) + 4px); }
-  .overlay-head { top: calc(env(safe-area-inset-top, 0px) + 4px); }
+  body { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+  .overlay-head { top: calc(env(safe-area-inset-top, 0px) + 12px); }
 }
 
 /* Theme button (System / Light / Dark) */
@@ -445,7 +445,7 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before {
   padding-top: max(16px, env(safe-area-inset-top)); padding-bottom: max(20px, env(safe-area-inset-bottom));
   padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
 }
-@media (display-mode: standalone) { .case-detail { padding-top: calc(env(safe-area-inset-top, 0px) + 4px); } }
+@media (display-mode: standalone) { .case-detail { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); } }
 .case-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; max-width: 720px; width: 100%; margin: 0 auto; }
 .case-detail-head h2 { margin: 2px 0 0; font-size: 22px; letter-spacing: -0.01em; }
 .case-detail-body { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 720px; width: 100%; margin: 0 auto; }
@@ -697,7 +697,7 @@ body:not(.solving) .app.phone .stage .time { font-size: clamp(64px, 19vw, 120px)
   padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 20px max(16px, env(safe-area-inset-left));
 }
 @media (display-mode: standalone) {
-  .page-scroll { padding-top: calc(env(safe-area-inset-top, 0px) + 4px); }
+  .page-scroll { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }
 }
 html.scroll-locked .page-scroll { overflow: hidden; }
 .page-area { flex: 1 1 auto; min-height: 0; position: relative; display: flex; flex-direction: column; }
@@ -915,7 +915,7 @@ html.timer-bg .stage .time, html.timer-bg .stage .hint { text-shadow: 0 1px 12px
   padding-top: max(16px, env(safe-area-inset-top)); padding-bottom: max(20px, env(safe-area-inset-bottom));
   padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right));
 }
-@media (display-mode: standalone) { .avg-detail { padding-top: calc(env(safe-area-inset-top, 0px) + 4px); } }
+@media (display-mode: standalone) { .avg-detail { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); } }
 .avg-detail-inner { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .avg-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .avg-detail-value { font: 400 44px/1.1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 2px; }
