@@ -53,7 +53,7 @@ Speedcubing timer built as an installable PWA (Vite + React + TypeScript + vite-
 
 - Algorithms page: 3×3 F2L (all 41 cases), OLL (57), PLL (21) and COLL (40), and 2×2 Ortega (OLL and
   PBL), with diagrams, up to 4
-  algorithms each (standard first, pick your own main), setups, named triggers (Sune, Sledgehammer…),
+  algorithms each (standard first, pick your own main), setups, named triggers (Sune, Sexy, Sledgehammer, F sexy, inserts like R U R' and F' U' F…, chosen to cover as much of each algorithm as possible),
   a 3D cube that plays them, group/status filters, Learning/Learned status, and a cross-color setting
   that recolors the diagrams. Every algorithm is checked on a cube model (`npm run check:algs`).
 - Trainer: scrambles into a random F2L, OLL, PLL or COLL case from the ones you pick (shown only after the solve,

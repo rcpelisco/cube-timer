@@ -757,15 +757,19 @@ body .stage .time.time-hidden, body.solving .stage .time.time-hidden { font-size
 /* Triggers inside algorithms */
 :root {
   --trig-sexy: #0b57d0; --trig-sledge: #b86e00; --trig-hedge: #8a3fc4; --trig-sune: #0a8f4f;
+  --trig-fsexy: #c2185b; --trig-insert: #52606f;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --trig-sexy: #7aaeff; --trig-sledge: #f0a83a; --trig-hedge: #c39bff; --trig-sune: #3fd18a; }
+  :root:not([data-theme="light"]) { --trig-sexy: #7aaeff; --trig-sledge: #f0a83a; --trig-hedge: #c39bff; --trig-sune: #3fd18a; --trig-fsexy: #ff8fb8; --trig-insert: #9aa8ba; }
 }
-:root[data-theme="dark"] { --trig-sexy: #7aaeff; --trig-sledge: #f0a83a; --trig-hedge: #c39bff; --trig-sune: #3fd18a; }
+:root[data-theme="dark"] { --trig-sexy: #7aaeff; --trig-sledge: #f0a83a; --trig-hedge: #c39bff; --trig-sune: #3fd18a; --trig-fsexy: #ff8fb8; --trig-insert: #9aa8ba; }
 .trig-sexy { --trig: var(--trig-sexy); }
 .trig-sledge { --trig: var(--trig-sledge); }
 .trig-hedge { --trig: var(--trig-hedge); }
 .trig-sune { --trig: var(--trig-sune); }
+/* F sexy wraps a sexy move; inserts are the most common, so they're the quietest colour. */
+.trig-fsexy { --trig: var(--trig-fsexy); }
+.trig-insert { --trig: var(--trig-insert); }
 .trig {
   background: color-mix(in srgb, var(--trig) 13%, transparent);
   box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--trig) 70%, transparent);
