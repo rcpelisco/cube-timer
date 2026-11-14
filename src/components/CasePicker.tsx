@@ -1,17 +1,17 @@
 import { useState } from "react";
 import type { AlgCase } from "../lib/algs";
-import { mainAlg, type AlgChoices } from "../lib/algChoice";
+import { mainAlg, type AlgPicks } from "../lib/algChoice";
 import type { CrossColor } from "../lib/crossColor";
 import { CaseDiagram } from "./CaseDiagram";
 
 // Choose exactly which cases the trainer uses: tap cases one by one, or a whole group at once.
 // `picked` null means every case (so cases you haven't seen yet are included too).
-export function CasePicker({ cases, allIds, picked, onChange, choices, cross }: {
+export function CasePicker({ cases, allIds, picked, onChange, picks, cross }: {
   cases: AlgCase[];                  // the cases matching the status filter
   allIds: string[];                  // every case in the set, shown or not
   picked: string[] | null;
   onChange: (ids: string[] | null) => void;
-  choices: AlgChoices; cross: CrossColor;
+  picks: AlgPicks; cross: CrossColor;
 }) {
   const [open, setOpen] = useState(false);
   const isOn = (id: string) => picked === null || picked.includes(id);
@@ -69,7 +69,7 @@ export function CasePicker({ cases, allIds, picked, onChange, choices, cross }: 
             {cases.map(c => (
               <button key={c.id} type="button" className={`case-pick${isOn(c.id) ? " on" : ""}`} aria-pressed={isOn(c.id)}
                 onClick={() => toggle(c.id)}>
-                <CaseDiagram c={c} alg={mainAlg(c, choices)} cross={cross} className="case-pick-diagram" />
+                <CaseDiagram c={c} alg={mainAlg(c, picks)} cross={cross} className="case-pick-diagram" />
                 <span>{c.name.replace(/ perm$/, "")}</span>
               </button>
             ))}

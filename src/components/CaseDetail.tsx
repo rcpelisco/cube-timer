@@ -7,15 +7,19 @@ import { AlgText } from "./AlgText";
 import { TwistyView } from "./TwistyView";
 import { rotationFor, stickeringMask, stickeringMask2x2, type CrossColor } from "../lib/crossColor";
 import { STATUS_LABEL, STATUS_ORDER, type LearnStatus } from "../lib/algStatus";
+import { checkAlg } from "../lib/algCheck";
+import { MAX_CUSTOM_PER_CASE } from "../lib/algCustom";
 
 // Full-screen view of one case: the diagram, every algorithm for it (standard first; pick the one
 // you use as "main"), and the setup for the main one. Tapping the diagram or "Watch" opens a popup
 // with a 3D cube that plays that algorithm. Swipe left/right (or ← →, or ‹ ›) for the next or
-// previous case in the list as currently filtered.
+// previous case in the list as currently filtered. You can add your own algorithms under the
+// listed ones; each is checked on a cube model first (algCheck.ts).
 const SWIPE_PX = 60;
 
-export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onClose, position, onPrev, onNext }: {
+export function CaseDetail({ c, cross, main, onChooseMain, custom, onAddCustom, onRemoveCustom, status, onStatus, onClose, position, onPrev, onNext }: {
   c: AlgCase; cross: CrossColor; main: string; onChooseMain: (alg: string) => void;
+  custom: string[]; onAddCustom: (alg: string) => void; onRemoveCustom: (alg: string) => void;
   status: LearnStatus; onStatus: (s: LearnStatus) => void; onClose: () => void;
   position: { index: number; total: number } | null; onPrev: (() => void) | null; onNext: (() => void) | null;
 }) {
@@ -70,7 +74,7 @@ export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onC
       }}>
       <div className="case-detail-head">
         <div>
-          <span className="label">{puzzleOf(c.set) === "2x2" ? "2×2 " : ""}{SET_LABEL[c.set]} · {c.group}</span>
+          <span className="label">{puzzleOf(c.set) === "3x3" ? "" : `${puzzleOf(c.set).replace("x", "×")} `}{SET_LABEL[c.set]} · {c.group}</span>
           <h2>{c.name}</h2>
         </div>
         <div className="case-nav">
@@ -95,21 +99,29 @@ export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onC
         </button>
 
         <section className="alg-list" aria-label="Algorithms">
-          <h3>Algorithms <span>{c.algs.length}</span></h3>
-          {c.algs.map((alg, i) => (
-            <div key={alg} className={`alg-row${alg === main ? " main" : ""}`}>
-              <div className="alg-row-tags">
-                {i === 0 && <span className="tag">Standard</span>}
-                {alg === main && <span className="tag main">Main</span>}
+          <h3>Algorithms <span>{c.algs.length + custom.length}</span></h3>
+          {[...c.algs, ...custom].map((alg, i) => {
+            const yours = i >= c.algs.length;
+            return (
+              <div key={alg} className={`alg-row${alg === main ? " main" : ""}`}>
+                <div className="alg-row-tags">
+                  {i === 0 && <span className="tag">Standard</span>}
+                  {yours && <span className="tag yours">Yours</span>}
+                  {alg === main && <span className="tag main">Main</span>}
+                </div>
+                <p className="moves"><AlgText alg={alg} labels /></p>
+                <div className="alg-row-actions">
+                  {alg !== main && <button type="button" onClick={() => onChooseMain(alg)}>Use as main</button>}
+                  <button type="button" onClick={() => setWatching(alg)}>Watch</button>
+                  <CopyButton text={alg} label="algorithm" />
+                  {yours && <button type="button" className="danger" onClick={() => onRemoveCustom(alg)} aria-label={`Remove ${alg}`}>Remove</button>}
+                </div>
               </div>
-              <p className="moves"><AlgText alg={alg} labels /></p>
-              <div className="alg-row-actions">
-                {alg !== main && <button type="button" onClick={() => onChooseMain(alg)}>Use as main</button>}
-                <button type="button" onClick={() => setWatching(alg)}>Watch</button>
-                <CopyButton text={alg} label="algorithm" />
-              </div>
-            </div>
-          ))}
+            );
+          })}
+          {custom.length < MAX_CUSTOM_PER_CASE
+            ? <AddAlg c={c} existing={[...c.algs, ...custom]} onAdd={onAddCustom} />
+            : <p className="alg-add-note">You've added {MAX_CUSTOM_PER_CASE} algorithms to this case, the most it holds.</p>}
         </section>
 
         <section className="moves-block">
@@ -130,7 +142,7 @@ export function CaseDetail({ c, cross, main, onChooseMain, status, onStatus, onC
 }
 
 function Cube3DPopup({ c, alg, cross, onClose }: { c: AlgCase; alg: string; cross: CrossColor; onClose: () => void }) {
-  const is2x2 = puzzleOf(c.set) === "2x2";
+  const puzzle = puzzleOf(c.set);
   const { leaving, close } = useLeave(onClose);
   // Esc closes just this popup: catch it before the detail view's own Esc handler.
   useEffect(() => {
@@ -150,14 +162,50 @@ function Cube3DPopup({ c, alg, cross, onClose }: { c: AlgCase; alg: string; cros
           <button type="button" className="overlay-close" aria-label="Close 3D cube" onClick={close}>✕</button>
         </div>
         <TwistyView className="case-3d" label={`${c.name} algorithm on a 3D cube`} options={{
-          puzzle: is2x2 ? "2x2x2" : "3x3x3", alg, experimentalSetupAlg: rotationFor(cross), experimentalSetupAnchor: "end",
-          experimentalStickeringMaskOrbits: c.set === "OLL2" || c.set === "PBL" ? stickeringMask2x2(c.set, cross) : stickeringMask(c.set, cross),
+          puzzle: puzzle === "2x2" ? "2x2x2" : puzzle === "4x4" ? "4x4x4" : "3x3x3", alg, experimentalSetupAlg: rotationFor(cross), experimentalSetupAnchor: "end",
+          // 4×4: every sticker shown (the 3×3 masks don't fit its pieces).
+          experimentalStickeringMaskOrbits: c.set === "OLL2" || c.set === "PBL" ? stickeringMask2x2(c.set, cross) : c.set === "PAR4" ? undefined : stickeringMask(c.set, cross),
           visualization: "3D", background: "none",
           controlPanel: "bottom-row", hintFacelets: "floating", viewerLink: "none", tempoScale: 1.5,
         }} />
         <p className="moves cube-popup-moves"><AlgText alg={alg} /></p>
       </div>
     </div>
+  );
+}
+
+// Type an algorithm, check it solves this case on a cube model, then add it to the list.
+function AddAlg({ c, existing, onAdd }: { c: AlgCase; existing: string[]; onAdd: (alg: string) => void }) {
+  const [text, setText] = useState("");
+  const [state, setState] = useState<{ kind: "idle" | "checking" | "added" } | { kind: "error"; reason: string }>({ kind: "idle" });
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (state.kind === "checking") return;
+    setState({ kind: "checking" });
+    checkAlg(c, text, existing).then(
+      r => {
+        if (r.ok) { onAdd(r.alg); setText(""); setState({ kind: "added" }); }
+        else setState({ kind: "error", reason: r.reason });
+      },
+      () => setState({ kind: "error", reason: "Couldn't check it. Try again." }),
+    );
+  };
+  const id = `alg-add-${c.id}`;
+  return (
+    <form className="alg-add" onSubmit={submit}>
+      <label htmlFor={id}>Add your own</label>
+      <div className="alg-add-row">
+        <input id={id} type="text" value={text} autoComplete="off" autoCapitalize="characters" spellCheck={false}
+          placeholder={c.algs[0]} aria-describedby={`${id}-msg`}
+          onChange={e => { setText(e.target.value); if (state.kind !== "checking") setState({ kind: "idle" }); }} />
+        <button type="submit" disabled={!text.trim() || state.kind === "checking"}>{state.kind === "checking" ? "Checking…" : "Add"}</button>
+      </div>
+      <p id={`${id}-msg`} className={`alg-add-note${state.kind === "error" ? " error" : ""}`} role={state.kind === "error" ? "alert" : "status"}>
+        {state.kind === "error" ? state.reason
+          : state.kind === "added" ? "Added. It solves this case on a cube model."
+          : "It's checked on a cube model first. It can start from any turn of the top."}
+      </p>
+    </form>
   );
 }
 

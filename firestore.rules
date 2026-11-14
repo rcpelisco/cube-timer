@@ -22,9 +22,10 @@ service cloud.firestore {
 
     function validAlgs(a) {
       return a is map
-        && a.keys().hasOnly(['statuses', 'choices', 'cross', 'updatedAt'])
+        && a.keys().hasOnly(['statuses', 'choices', 'custom', 'cross', 'updatedAt'])
         && optMap(a, 'statuses', 1000)
         && optMap(a, 'choices', 1000)
+        && optMap(a, 'custom', 1000)
         && optStr(a, 'cross', 20)
         && optNum(a, 'updatedAt');
     }

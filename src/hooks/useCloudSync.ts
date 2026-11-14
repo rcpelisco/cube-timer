@@ -57,7 +57,7 @@ export interface CloudSync {
   deleteCloud: () => Promise<void>;
 }
 
-const NO_ALG_PREFS: AlgPrefs = { statuses: {}, choices: {}, cross: "white", updatedAt: 0 };
+const NO_ALG_PREFS: AlgPrefs = { statuses: {}, choices: {}, custom: {}, cross: "white", updatedAt: 0 };
 
 export function useCloudSync({ user, sessions, inspection, algPrefs, trainer, setSessions, setInspection, setAlgPrefs, setTrainer }: Options): CloudSync {
   const [status, setStatus] = useState<SyncStatus>("off");

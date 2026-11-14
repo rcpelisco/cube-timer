@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSeen } from "../hooks/useSeen";
 import { puzzleOf, type AlgCase } from "../lib/algs";
 import { CROSS_COLORS, facesFor, type CrossColor } from "../lib/crossColor";
-import { cubeView, llStickers, stickers2x2, type CubeView, type Face, type Face2, type Face3, type Layer2, type LLStickers, type Stickers2 } from "../lib/llDiagram";
+import { cubeView, llStickers, stickers2x2, stickers4x4, type CubeView, type Face, type Face2, type Face3, type Layer2, type LLStickers, type Stickers2, type Stickers4 } from "../lib/llDiagram";
 
 // Last-layer diagrams. Each one only works out its stickers once it's near the screen, so a long
 // list of cases opens without doing them all at once. Stickers come from undoing the algorithm on a cube model, so the drawing
@@ -15,9 +15,12 @@ import { cubeView, llStickers, stickers2x2, type CubeView, type Face, type Face2
 // - 2×2 OLL: the same, 2×2.
 // - 2×2 PBL: both layers, top and bottom, each as a face with its side strips. The bottom is drawn
 //   as seen from above (through the cube), so its front is at the bottom like the top's.
+// - 4×4 parity: the top face as a 4×4 grid with side strips. OLL parity shows only the top color;
+//   PLL parity shows the side colors too.
 
 export function CaseDiagram(props: { c: AlgCase; alg: string; cross: CrossColor; className?: string }) {
   if (puzzleOf(props.c.set) === "2x2") return <Diagram2x2 {...props} />;
+  if (puzzleOf(props.c.set) === "4x4") return <Diagram4x4 {...props} />;
   return props.c.set === "F2L" ? <DiagramF2L {...props} /> : <Diagram3x3 {...props} />;
 }
 
@@ -61,6 +64,39 @@ function Diagram3x3({ c, alg, cross, className = "" }: { c: AlgCase; alg: string
     rects.push({ x: FAR, y: pos(i), w: S, h: CELL, f: side(st?.sides.R[i], i) });
   }
 
+  return (
+    <svg ref={ref} className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
+      {rects.map((r, i) => <Sticker key={i} {...r} fill={fill(r.f)} />)}
+    </svg>
+  );
+}
+
+function Diagram4x4({ c, alg, cross, className = "" }: { c: AlgCase; alg: string; cross: CrossColor; className?: string }) {
+  const [st, setSt] = useState<Stickers4 | null>(null);
+  const [ref, seen] = useSeen<SVGSVGElement>();
+  useEffect(() => {
+    if (!seen) return;
+    let alive = true;
+    stickers4x4(alg).then(s => { if (alive) setSt(s); });
+    return () => { alive = false; };
+  }, [alg, seen]);
+
+  const CELL = 16;
+  const pos = (i: number) => O + i * (CELL + GAP);
+  const FAR = O + 4 * CELL + 3 * GAP + G;
+  const faces = facesFor(cross);
+  const topOnly = c.id === "par4-oll";
+  const fill = (f: Face | undefined) => (!f ? "var(--sticker-off)" : topOnly && f !== "U" ? "var(--sticker-off)" : faces[f]);
+  const rects: { x: number; y: number; w: number; h: number; f?: Face }[] = [];
+  for (let r = 0; r < 4; r++) for (let col = 0; col < 4; col++) {
+    rects.push({ x: pos(col), y: pos(r), w: CELL, h: CELL, f: st?.top[r][col] });
+  }
+  for (let i = 0; i < 4; i++) {
+    rects.push({ x: pos(i), y: M, w: CELL, h: S, f: st?.sides.B[i] });
+    rects.push({ x: pos(i), y: FAR, w: CELL, h: S, f: st?.sides.F[i] });
+    rects.push({ x: M, y: pos(i), w: S, h: CELL, f: st?.sides.L[i] });
+    rects.push({ x: FAR, y: pos(i), w: S, h: CELL, f: st?.sides.R[i] });
+  }
   return (
     <svg ref={ref} className={`case-diagram ${className}`} viewBox="0 0 100 100" role="img" aria-label={`${c.name} case`}>
       {rects.map((r, i) => <Sticker key={i} {...r} fill={fill(r.f)} />)}

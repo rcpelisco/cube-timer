@@ -116,13 +116,13 @@ export function TrainerPage({ prefs: { prefs }, trainer: { store, setStore } }: 
         </label>
         {byStatus.length > 0 && (
           <CasePicker cases={byStatus} allIds={all.map(c => c.id)} picked={picked} onChange={setPicked}
-            choices={prefs.choices} cross={cross} />
+            picks={prefs} cross={cross} />
         )}
         </>}
       </div>
 
       {drill ? (
-        <DrillRun drill={drill} level={store.level} plan={store.plan} cross={cross} choices={prefs.choices} times={store.times} setStore={setStore} />
+        <DrillRun drill={drill} level={store.level} plan={store.plan} cross={cross} picks={prefs} times={store.times} setStore={setStore} />
       ) : pool.length === 0 ? (
         <p className="trainer-empty panel">
           {byStatus.length === 0
@@ -141,7 +141,7 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
   pool: AlgCase[]; poolKey: string; set: AlgSet; times: TrainerState["times"]; focus: boolean;
   setStore: Dispatch<SetStateAction<TrainerState>>; prefs: AlgPrefs;
 }) {
-  const { cross } = prefs;
+  const { cross, choices, custom } = prefs;
   const crossInfo = CROSS_COLORS.find(c => c.id === cross)!;
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [last, setLast] = useState<{ c: AlgCase; t: number } | null>(null);
@@ -156,11 +156,11 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
     const id = ++request.current;
     if (!c) { setAttempt(null); return; }
     setAttempt({ c, scramble: null });
-    caseScramble(mainAlg(c, prefs.choices), cross, c.set).then(
+    caseScramble(mainAlg(c, { choices, custom }), cross, c.set).then(
       scramble => { if (id === request.current) setAttempt({ c, scramble }); },
       () => { if (id === request.current) setAttempt({ c, scramble: null, failed: true }); },
     );
-  }, [prefs.choices, cross]);
+  }, [choices, custom, cross]);
 
   // New case whenever the pool (set, statuses, cross color) changes.
   const loadRef = useRef(load);
@@ -324,11 +324,11 @@ function TrainerRun({ pool, poolKey, set, times, focus, setStore, prefs }: {
 
           {last && lastStats && (
             <div className="panel trainer-last dimmable">
-              <CaseDiagram c={last.c} alg={mainAlg(last.c, prefs.choices)} cross={cross} className="trainer-diagram" />
+              <CaseDiagram c={last.c} alg={mainAlg(last.c, prefs)} cross={cross} className="trainer-diagram" />
               <div>
                 <h2>Last case</h2>
                 <b className="trainer-case">{last.c.name} <span>{fmt(last.t)}</span></b>
-                <code className="trainer-alg"><AlgText alg={mainAlg(last.c, prefs.choices)} labels /></code>
+                <code className="trainer-alg"><AlgText alg={mainAlg(last.c, prefs)} labels /></code>
                 <small>Avg of 5 {fmt(lastStats.avg)} · best {fmt(lastStats.best)} · {lastStats.reps} {lastStats.reps === 1 ? "time" : "times"}</small>
               </div>
             </div>

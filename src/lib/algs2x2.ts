@@ -27,7 +27,7 @@ export const OLL2: AlgCase[] = [
 export const PBL: AlgCase[] = [
   pbl("adj", "Adj top", "One layer", ["R U2 R' U' R U2 L' U R' U' L", "R U R' F' R U R' U' R' F R2 U' R'", "R U R' U' R' F R2 U' R' U' R U R' F'"]),
   pbl("diag", "Diag top", "One layer", ["R U' R' U' F2 U' R U R' D R2", "F R U' R' U' R U R' F' R U R' U' R' F R F'", "F R' F R2 U' R' U' R U R' F' R U R' U' F'", "R U' R' U' F2 U' R U R' U F2"]),
-  pbl("adj-adj", "Double adj", "Both layers", ["R2 U' B2 U2 R2 U' R2", "R2 U R2 U2 F2 U F2", "R2 U' R2 U2 F2 U' F2"]),
+  pbl("adj-adj", "Double adj", "Both layers", ["R2 U' B2 U2 R2 U' R2", "R2 U R2 U2 F2 U F2"]),
   pbl("diag-diag", "Double diag", "Both layers", ["R2 F2 R2", "R2 B2 R2", "x R2 U2 R2 x'"]),
   pbl("adj-diag", "Adj top / diag bottom", "Both layers", ["R U' R F2 R' U R'", "R' U R' F2 R F' R", "R' F R' F2 R U' R"]),
 ];

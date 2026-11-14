@@ -6,17 +6,19 @@
 // Case diagrams are drawn from the algorithm, so they show the cube as held for that algorithm.
 
 import { OLL2, PBL } from "./algs2x2.ts";
+import { PAR4 } from "./algs4x4.ts";
 import { F2L } from "./algsF2L.ts";
 import { COLL } from "./algsCOLL.ts";
 
 // 3×3: F2L, OLL, PLL (CFOP), COLL (corners of the last layer in one go, after edges are oriented).
 // 2×2: OLL2, PBL (Ortega). OLL2 is shown as "OLL" on the 2×2 tab.
-export type AlgSet = "F2L" | "OLL" | "PLL" | "COLL" | "OLL2" | "PBL";
-export type AlgPuzzle = "3x3" | "2x2";
-export const SETS: Record<AlgPuzzle, AlgSet[]> = { "3x3": ["F2L", "OLL", "PLL", "COLL"], "2x2": ["OLL2", "PBL"] };
-export const SET_LABEL: Record<AlgSet, string> = { F2L: "F2L", OLL: "OLL", PLL: "PLL", COLL: "COLL", OLL2: "OLL", PBL: "PBL" };
-export const puzzleOf = (set: AlgSet): AlgPuzzle => (set === "OLL2" || set === "PBL" ? "2x2" : "3x3");
-const ALL_SETS: readonly unknown[] = ["F2L", "OLL", "PLL", "COLL", "OLL2", "PBL"];
+// 4×4: PAR4, the OLL and PLL parity cases.
+export type AlgSet = "F2L" | "OLL" | "PLL" | "COLL" | "OLL2" | "PBL" | "PAR4";
+export type AlgPuzzle = "3x3" | "2x2" | "4x4";
+export const SETS: Record<AlgPuzzle, AlgSet[]> = { "3x3": ["F2L", "OLL", "PLL", "COLL"], "2x2": ["OLL2", "PBL"], "4x4": ["PAR4"] };
+export const SET_LABEL: Record<AlgSet, string> = { F2L: "F2L", OLL: "OLL", PLL: "PLL", COLL: "COLL", OLL2: "OLL", PBL: "PBL", PAR4: "Parity" };
+export const puzzleOf = (set: AlgSet): AlgPuzzle => (set === "OLL2" || set === "PBL" ? "2x2" : set === "PAR4" ? "4x4" : "3x3");
+const ALL_SETS: readonly unknown[] = ["F2L", "OLL", "PLL", "COLL", "OLL2", "PBL", "PAR4"];
 export const isAlgSet = (v: unknown): v is AlgSet => ALL_SETS.includes(v);
 export interface AlgCase { set: AlgSet; id: string; name: string; group: string; algs: string[] }
 
@@ -109,7 +111,7 @@ export const PLL: AlgCase[] = [
   pll("Y", "Diagonal swap", ["F R U' R' U' R U R' F' R U R' U' R' F R F'", "F R' F R2 U' R' U' R U R' F' R U R' U' F'", "R2 U' R2 U' R2 U F U F' R2 F U' F'", "F R' F' R U R U' R2 U' R U R f' U' f"]),
 ];
 
-export const ALGS: Record<AlgSet, AlgCase[]> = { F2L, OLL, PLL, COLL, OLL2, PBL };
+export const ALGS: Record<AlgSet, AlgCase[]> = { F2L, OLL, PLL, COLL, OLL2, PBL, PAR4 };
 
 // Setup: the moves that turn a solved cube into the case (the algorithm reversed), done holding the
 // cube the same way as when solving it. Checked against the cube model by `npm run check:algs`.

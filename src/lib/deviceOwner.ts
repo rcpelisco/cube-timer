@@ -1,5 +1,5 @@
 import type { Session } from "./sessions";
-import type { AlgPrefs } from "./algPrefs";
+import { readCloudAlgPrefs, type AlgPrefs } from "./algPrefs";
 import type { TrainerTimes } from "./trainer";
 
 // Which account the solves on this device belong to, so signing in with a different account
@@ -74,7 +74,7 @@ export function takeStash(uid: string): Stash {
   try {
     const raw = JSON.parse(localStorage.getItem(stashKey(uid)) || "null") as Partial<Stash> | null;
     localStorage.removeItem(stashKey(uid));
-    if (raw && Array.isArray(raw.sessions)) return { sessions: raw.sessions, algs: raw.algs ?? null, trainer: raw.trainer ?? null };
+    if (raw && Array.isArray(raw.sessions)) return { sessions: raw.sessions, algs: readCloudAlgPrefs(raw.algs), trainer: raw.trainer ?? null };
   } catch { /* ignore */ }
   return { sessions: [], algs: null, trainer: null };
 }

@@ -14,7 +14,7 @@ import { CaseDiagram } from "./CaseDiagram";
 import { CaseDetail } from "./CaseDetail";
 import { AlgText } from "./AlgText";
 import { CROSS_COLORS } from "../lib/crossColor";
-import { mainAlg } from "../lib/algChoice";
+import { algsFor, mainAlg } from "../lib/algChoice";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
@@ -41,6 +41,7 @@ const PLACEHOLDER: Record<AlgSet, string> = {
   PLL: "Filter: T, J, edges…",
   OLL2: "Filter: sune, H, pi…",
   PBL: "Filter: adj, diag…",
+  PAR4: "Filter: OLL, PLL…",
 };
 const INTRO: Record<AlgSet, string> = {
   F2L: "Pair up a corner and edge and put them in the front-right slot, with the cross on the bottom. Gray stickers don't matter for the case. Numbered by where the pieces are, so the numbers differ from other sites'.",
@@ -48,19 +49,20 @@ const INTRO: Record<AlgSet, string> = {
   OLL: "Orient the last layer: make the top all one color. Gray stickers don't matter for the case.",
   PLL: "Permute the last layer: move the oriented pieces into place.",
   OLL2: "Ortega step 2: with one face solved on the bottom, make the top all one color. Gray stickers don't matter for the case.",
+  PAR4: "4×4 parity: after reduction (centers, then edge pairs) the last layer can end up in a state no 3×3 has. OLL parity: one edge pair is flipped. PLL parity: two edge pairs are swapped, with the corners done. 2R is only the inner slice next to R; Rw is both right layers together.",
   PBL: "Ortega step 3: both faces are done; swap corners in both layers at once. If the swap is only on the bottom, or diagonal on top and adjacent below, turn the cube over (x2) first.",
 };
 
 // Statuses, main algorithms and cross color live in the app (useAlgPrefs) so they can sync.
 export function AlgorithmsPage({
-  prefs: { prefs, setStatus: setCaseStatus, setMain, setCross },
+  prefs: { prefs, setStatus: setCaseStatus, setMain, addCustom, removeCustom, setCross },
 }: {
   prefs: ReturnType<typeof useAlgPrefs>;
 }) {
   const [tab, setTab] = useState<AlgSet>(loadTab);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const { cross, choices, statuses } = prefs;
+  const { cross, statuses } = prefs;
   const crossInfo = CROSS_COLORS.find((c) => c.id === cross)!;
   // Filters: selected groups (none = all) and a status (null = all).
   const [groupFilter, setGroupFilter] = useState<Set<string>>(new Set());
@@ -137,7 +139,7 @@ export function AlgorithmsPage({
         role="radiogroup"
         aria-label="Puzzle"
       >
-        {(["3x3", "2x2"] as const).map((p) => (
+        {(["3x3", "2x2", "4x4"] as const).map((p) => (
           <button
             key={p}
             type="button"
@@ -195,7 +197,7 @@ export function AlgorithmsPage({
             >
               <CaseDiagram
                 c={cases[0]}
-                alg={mainAlg(cases[0], choices)}
+                alg={mainAlg(cases[0], prefs)}
                 cross={cross}
                 className="group-tile-diagram"
               />
@@ -298,7 +300,7 @@ export function AlgorithmsPage({
           </h2>
           <div className="algs-grid">
             {cases.map((c) => {
-              const alg = mainAlg(c, choices);
+              const alg = mainAlg(c, prefs);
               const st = statusOf(statuses, c.id);
               return (
                 <button
@@ -310,8 +312,10 @@ export function AlgorithmsPage({
                   <CaseDiagram c={c} alg={alg} cross={cross} />
                   <span className="case-name">
                     {c.name}
-                    {c.algs.length > 1 && (
-                      <span className="case-count">{c.algs.length} algs</span>
+                    {algsFor(c, prefs.custom).length > 1 && (
+                      <span className="case-count">
+                        {algsFor(c, prefs.custom).length} algs
+                      </span>
                     )}
                   </span>
                   {st !== "none" && (
@@ -337,8 +341,11 @@ export function AlgorithmsPage({
         <CaseDetail
           c={open}
           cross={cross}
-          main={mainAlg(open, choices)}
+          main={mainAlg(open, prefs)}
           onChooseMain={(alg) => setMain(open, alg)}
+          custom={prefs.custom[open.id] ?? []}
+          onAddCustom={(alg) => addCustom(open, alg)}
+          onRemoveCustom={(alg) => removeCustom(open, alg)}
           status={statusOf(statuses, open.id)}
           onStatus={(s) => setCaseStatus(open, s)}
           onClose={() => setOpenId(null)}

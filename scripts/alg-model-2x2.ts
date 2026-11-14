@@ -38,7 +38,13 @@ function sticker(p: Pattern, slot: number, face: string): string {
 // Bottom layer solved (every bottom corner in place and oriented).
 export const bottomSolved = (p: Pattern) =>
   [4, 5, 6, 7].every(s => p.patternData.CORNERS.pieces[s] === s && p.patternData.CORNERS.orientation[s] === 0);
-export const allOriented = (p: Pattern) => p.patternData.CORNERS.orientation.every(o => o === 0);
+// Both faces one color each: every corner oriented, and the top four all from one layer (the top,
+// or the bottom when the algorithm leaves the cube turned over, which is fine on a 2×2).
+export const allOriented = (p: Pattern) => {
+  const { pieces, orientation } = p.patternData.CORNERS;
+  const top = pieces.slice(0, 4);
+  return orientation.every(o => o === 0) && (top.every(v => v < 4) || top.every(v => v >= 4));
+};
 
 // Top-layer twist pattern up to U turns (slots 0–3 go round the top).
 export function ollKey(p: Pattern): string {

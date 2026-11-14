@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { mainAlg, type AlgChoices } from "../lib/algChoice";
+import { mainAlg, type AlgPicks } from "../lib/algChoice";
 import { CROSS_COLORS, type CrossColor } from "../lib/crossColor";
 import { CROSS_LEVELS, crossScramble, drillKey, llScramble, type CrossLevel, type CrossResult, type Drill, type LLResult, type LLStep } from "../lib/drills";
 import { DNF, fmt, type Penalty } from "../lib/stats";
@@ -23,8 +23,8 @@ interface Last { info: Info; t: number; pen: Penalty; key: string }
 const stepName = (s: LLStep, what: string) => (s === "skip" ? `${what} skip` : s ? s.name : `${what} ?`);
 
 // Last layer and cross practice: a fresh scramble each time, timed, with what it was shown after.
-export function DrillRun({ drill, level, plan, cross, choices, times, setStore }: {
-  drill: Drill; level: CrossLevel; plan: boolean; cross: CrossColor; choices: AlgChoices;
+export function DrillRun({ drill, level, plan, cross, picks, times, setStore }: {
+  drill: Drill; level: CrossLevel; plan: boolean; cross: CrossColor; picks: AlgPicks;
   times: TrainerState["times"]; setStore: Dispatch<SetStateAction<TrainerState>>;
 }) {
   const crossInfo = CROSS_COLORS.find(c => c.id === cross)!;
@@ -37,13 +37,13 @@ export function DrillRun({ drill, level, plan, cross, choices, times, setStore }
     const id = ++request.current;
     setAttempt({ info: null });
     const made: Promise<Info> = drill === "LL"
-      ? llScramble(cross, c => mainAlg(c, choices)).then(ll => ({ drill, ll }))
+      ? llScramble(cross, c => mainAlg(c, picks)).then(ll => ({ drill, ll }))
       : crossScramble(cross, level).then(r => ({ drill: "cross", cross: r, level }));
     made.then(
       info => { if (id === request.current) setAttempt({ info }); },
       () => { if (id === request.current) setAttempt({ info: null, failed: true }); },
     );
-  }, [drill, level, cross, choices]);
+  }, [drill, level, cross, picks]);
 
   // A new scramble when the drill, level or cross color changes (not when your algorithm picks do:
   // they only change how the case is named).
@@ -137,7 +137,7 @@ export function DrillRun({ drill, level, plan, cross, choices, times, setStore }
 
       {last && (
         <div className="panel trainer-last dimmable">
-          {last.info.drill === "LL" ? <LastLL ll={last.info.ll} t={lastText} choices={choices} cross={cross} />
+          {last.info.drill === "LL" ? <LastLL ll={last.info.ll} t={lastText} picks={picks} cross={cross} />
             : <div className="trainer-cross">
                 <h2>Last cross</h2>
                 <b className="trainer-case">{last.info.cross.moves} {last.info.cross.moves === 1 ? "move" : "moves"} <span>{lastText}</span></b>
@@ -168,16 +168,16 @@ export function DrillRun({ drill, level, plan, cross, choices, times, setStore }
   );
 }
 
-function LastLL({ ll, t, choices, cross }: { ll: LLResult; t: string; choices: AlgChoices; cross: CrossColor }) {
+function LastLL({ ll, t, picks, cross }: { ll: LLResult; t: string; picks: AlgPicks; cross: CrossColor }) {
   return (
     <div className="trainer-ll">
       <h2>Last layer <span>{t}</span></h2>
       {([[ll.oll, "OLL"], [ll.pll, "PLL"]] as const).map(([step, what]) => (
         <div key={what} className="trainer-ll-step">
-          {step && step !== "skip" && <CaseDiagram c={step} alg={mainAlg(step, choices)} cross={cross} className="trainer-diagram" />}
+          {step && step !== "skip" && <CaseDiagram c={step} alg={mainAlg(step, picks)} cross={cross} className="trainer-diagram" />}
           <div>
             <b className="trainer-case">{stepName(step, what)}</b>
-            {step && step !== "skip" && <code className="trainer-alg"><AlgText alg={mainAlg(step, choices)} labels /></code>}
+            {step && step !== "skip" && <code className="trainer-alg"><AlgText alg={mainAlg(step, picks)} labels /></code>}
           </div>
         </div>
       ))}

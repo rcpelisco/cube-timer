@@ -505,6 +505,17 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before {
 .alg-row-tags:empty { display: none; }
 .tag { font: 600 10px var(--font-ui); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
 .tag.main { color: var(--accent); border-color: var(--accent); }
+.tag.yours { color: var(--ready); border-color: var(--ready); }
+.alg-add { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.alg-add label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 600; }
+.alg-add-row { display: flex; gap: 6px; }
+.alg-add-row input {
+  flex: 1; min-width: 0; font: inherit; font-family: var(--font-num); font-size: 16px; padding: 8px 10px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+}
+.alg-add-row input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.alg-add-note { margin: 0; font-size: 12px; color: var(--muted); }
+.alg-add-note.error { color: var(--hold); }
 .alg-row-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .alg-row-actions button { padding: 4px 10px; font-size: 12px; }
 

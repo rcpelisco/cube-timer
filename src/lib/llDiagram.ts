@@ -146,3 +146,70 @@ export async function stickers2x2(alg: string): Promise<Stickers2> {
   cache2.set(alg, result);
   return result;
 }
+
+// ---------- 4×4 ----------
+// The top layer of a 4×4: corners as on a 3×3, and each top edge as two wings. Undo the algorithm,
+// then turn the top so the corners are home (parity algorithms often end needing a U2), so the
+// drawing shows which edges are flipped or swapped. Wing slots are found from which turns move
+// them (outer faces for the edge, inner slices for which of its two wings), so nothing about
+// cubing.js's slot order is assumed.
+
+export interface Stickers4 {
+  top: Face[][];                                            // 4×4, row 0 = back, col 0 = left
+  sides: { B: Face[]; F: Face[]; L: Face[]; R: Face[] };    // B/F left→right, L/R back→front
+}
+
+interface Model4 { solved: KPattern; invert: (alg: string) => Alg; wing: (edge: string, slice: string) => number; home: string[] }
+let model4: Promise<Model4> | null = null;
+async function loadModel4(): Promise<Model4> {
+  const [{ puzzles }, { Alg }] = await Promise.all([import("cubing/puzzles"), import("cubing/alg")]);
+  const kp = await puzzles["4x4x4"].kpuzzle();
+  const moves = (m: string) => kp.moveToTransformation(m).transformationData.EDGES.permutation;
+  const by = (turns: string[]) => Array.from({ length: 24 }, (_, i) => turns.filter(m => moves(m)[i] !== i).join(""));
+  const outer = by(["U", "D", "F", "B", "R", "L"]), inner = by(["2F", "2B", "2R", "2L"]);
+  return {
+    solved: kp.defaultPattern(), invert: (alg: string) => new Alg(alg).invert(),
+    // The wing on `edge` (e.g. "UF") moved by inner slice `slice` (e.g. "2L" for its left one).
+    wing: (edge, slice) => outer.findIndex((o, i) => o === edge && inner[i] === slice),
+    home: outer,
+  };
+}
+
+const cache4 = new Map<string, Stickers4>();
+
+export async function stickers4x4(alg: string): Promise<Stickers4> {
+  const hit = cache4.get(alg);
+  if (hit) return hit;
+  model4 ??= loadModel4();
+  const { solved, invert, wing, home } = await model4;
+  const before = solved.applyAlg(invert(alg));
+  const homed = (q: KPattern) => q.patternData.CORNERS.pieces.filter((v, i) => i < 4 && v === i).length;
+  const p = ["U", "U2", "U'"].map(a => before.applyAlg(a)).reduce((a, b) => (homed(b) > homed(a) ? b : a), before).patternData;
+  const E = p.EDGES, C = p.CORNERS;
+  const corner = (slot: number, face: string) => {
+    const k = CORNER_FACES[slot].indexOf(face);
+    return CORNER_FACES[C.pieces[slot]][(k - C.orientation[slot] + 3) % 3] as Face;
+  };
+  // A top wing shows its home edge's top color on the top when unflipped, its side color otherwise.
+  const w = (edge: string, slice: string, onTop: boolean) => {
+    const slot = wing(edge, slice), piece = home[E.pieces[slot]];
+    const [a, b] = [piece[0], piece[1]];
+    return ((E.orientation[slot] === 0) === onTop ? a : b) as Face;
+  };
+  const result: Stickers4 = {
+    top: [
+      [corner(2, "U"), w("UB", "2L", true), w("UB", "2R", true), corner(1, "U")],
+      [w("UL", "2B", true), "U", "U", w("UR", "2B", true)],
+      [w("UL", "2F", true), "U", "U", w("UR", "2F", true)],
+      [corner(3, "U"), w("UF", "2L", true), w("UF", "2R", true), corner(0, "U")],
+    ],
+    sides: {
+      B: [corner(2, "B"), w("UB", "2L", false), w("UB", "2R", false), corner(1, "B")],
+      F: [corner(3, "F"), w("UF", "2L", false), w("UF", "2R", false), corner(0, "F")],
+      L: [corner(2, "L"), w("UL", "2B", false), w("UL", "2F", false), corner(3, "L")],
+      R: [corner(1, "R"), w("UR", "2B", false), w("UR", "2F", false), corner(0, "R")],
+    },
+  };
+  cache4.set(alg, result);
+  return result;
+}
